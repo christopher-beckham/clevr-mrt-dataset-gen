@@ -114,11 +114,12 @@ def setup_dev():
 
   # Imports
   bpy.ops.wm.open_mainfile(filepath="data/base_scene.blend")
-  utils.load_materials("data/materials")
-
   import utils
   import bmesh
   from mathutils import Vector
+
+  utils.load_materials("data/materials")
+
 
   # add a cube
   utils.add_object("data/shapes", "SmoothCube_v2", 0.7, (0, 0), theta=20.)
