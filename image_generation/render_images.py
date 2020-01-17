@@ -275,6 +275,7 @@ def render_scene(args,
   # Figure out the left, up, and behind directions along the plane and record
   # them in the scene structure
   camera = bpy.data.objects['Camera']
+  #Quaternion((0.781359076499939, 0.46651220321655273, 0.2125076949596405, 0.3559281527996063))
   plane_normal = plane.data.vertices[0].normal
   cam_behind = camera.matrix_world.to_quaternion() * Vector((0, 0, -1))
   cam_left = camera.matrix_world.to_quaternion() * Vector((-1, 0, 0))
@@ -282,6 +283,7 @@ def render_scene(args,
   plane_behind = (cam_behind - cam_behind.project(plane_normal)).normalized()
   plane_left = (cam_left - cam_left.project(plane_normal)).normalized()
   plane_up = cam_up.project(plane_normal).normalized()
+  camera.location[2] = 0.2
 
   # Delete the plane; we only used it for normals anyway. The base scene file
   # contains the actual ground plane.
