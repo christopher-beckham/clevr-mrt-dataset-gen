@@ -108,65 +108,110 @@ def add_object(object_dir, name, scale, loc, theta=0):
   bpy.ops.transform.translate(value=(x, y, scale))
 
 
-def setup_dev():
-  # Do this to ensure that we can access these files in blender
-  # echo $PWD/image_generation >> /home/martin/blender-2.78c-linux-glibc219-x86_64/2.78/python/lib/python3.5/site-packages/clevr.pth
+# def setup_dev():
+#   # Do this to ensure that we can access these files in blender
+#   # echo $PWD/image_generation >> /home/martin/blender-2.78c-linux-glibc219-x86_64/2.78/python/lib/python3.5/site-packages/clevr.pth
+#   #  ~/.local/bin/blender/blender
+#   # Imports
+#   bpy.ops.wm.open_mainfile(filepath="data/base_scene.blend")
+#   import utils
+#   import bmesh
+#   from mathutils import Vector
+#
+#   utils.load_materials("data/materials")
+#
+#   # add a cube
+#   #utils.add_object("data/shapes", "SmoothCube_v2", 0.7, (0, 0), theta=20.)
+#   utils.add_object("data/shapes", "SmoothCylinder", 0.7, (0, 0), theta=20.)
+#   cube = bpy.data.objects['SmoothCube_v2_0']
+#
+#   bpy.ops.object.mode_set(mode='OBJECT')
+#   cam_loc = bpy.data.objects["Camera"].location
+#   (hit, loc, norm, face_index) = cube.closest_point_on_mesh(cam_loc) # https://blender.stackexchange.com/questions/58409/how-do-i-find-the-closest-point-on-another-mesh-to-a-vertex-with-python
+#
+#
+#   bpy.ops.object.text_add(location=loc)
+#   text = bpy.data.objects['Text']
+#   text.data.body = "Hallo"
+#   text.data.extrude = 0.03
+#   text.rotation_euler = (1.5, 0, 1.0)
+#   m = text.new('My SubDiv', 'SUBSURF')
+#   m.levels = 1
+#   m.render_levels = 2
+#   m.subdivision_type = "SIMPLE"
+#
+#
+#   # shrink wrap the text to the object
+##
+#   # load fonts
+#
+#   # load text dataset (w/ entities?)
+#
+#   # randomize text sizes, styles and locations on the objects
+#
+#
+#
+#   # Excess crap
+#   # myFontCurve = bpy.data.curves.new(type="FONT", name="myFontCurve")
+#   # myFontOb = bpy.data.objects.new("myFontOb", myFontCurve)
+#   # myFontOb.data.body = "my text"
+#   # bpy.context.scene.objects.link(myFontOb)
+#   # bpy.context.scene.update()
+#   # vert_list = [cube.matrix_world * v.co for v in cube.data.vertices]
+#   # face_verts = [cube.matrix_world * v.co for v in bm.faces[0]]
+#
+#   # Ensure we are in edit mode and get a bmesh / bbox of the cube
+#   # bpy.ops.object.mode_set(mode='EDIT')
+#   # bpy.ops.mesh.normals_make_consistent(inside=False)
+#   # bm = bmesh.from_edit_mesh(cube.data)
+#   # bbox = [x[:] for x in cube.bound_box]
 
-  # Imports
-  bpy.ops.wm.open_mainfile(filepath="data/base_scene.blend")
-  import utils
-  import bmesh
-  from mathutils import Vector
 
-  utils.load_materials("data/materials")
-
-
-  # add a cube
-  utils.add_object("data/shapes", "SmoothCube_v2", 0.7, (0, 0), theta=20.)
-  cube = bpy.data.objects['SmoothCube_v2_0']
-
-  bpy.ops.object.mode_set(mode='OBJECT')
+def add_text(body):
+  obj = bpy.context.active_object
+  bpy.ops.object.modifier_add(type='SUBSURF')
+  bpy.context.active_object.modifiers['Subsurf'].levels = 2  # View
+  bpy.context.active_object.modifiers['Subsurf'].render_levels = 2  # Render
+  bpy.context.active_object.modifiers['Subsurf'].subdivision_type = "SIMPLE"
   cam_loc = bpy.data.objects["Camera"].location
-  (hit, loc, norm, face_index) = cube.closest_point_on_mesh(cam_loc) # https://blender.stackexchange.com/questions/58409/how-do-i-find-the-closest-point-on-another-mesh-to-a-vertex-with-python
+  (hit, loc, norm, face_index) = obj.closest_point_on_mesh(cam_loc)
+  text_location = obj.location.copy()
+  text_location[0] = text_location[0] - .29 * obj.dimensions[0]
+  text_location[1] = text_location[1] - .29 * obj.dimensions[1]
+  bpy.context.scene.update()
 
-
-  bpy.ops.object.text_add(location=loc)
-  text = bpy.data.objects['Text']\
-  text.data.body = "Hallo"
+  bpy.ops.object.text_add(location=text_location)
+  text = bpy.context.active_object
+  text.data.body = body
   text.data.extrude = 0.03
+  text.data.size = 0.3
+
+  # load and set font
+  font_dir = "data/fonts"
+  font = random.choice(os.listdir(font_dir))
+  font_path = os.path.join(font_dir, font)
+  font = bpy.data.fonts.load(font_path)
+  text.data.font = font
+
+  bpy.context.scene.update()
+  if text.dimensions[0] > obj.dimensions[0]:
+    text.dimensions[0] = obj.dimensions[0] - 0.3
+  if text.dimensions[1] > obj.dimensions[1]:
+    text.dimensions[1] = obj.dimensions[1] - 0.1
+  bpy.context.scene.update()
+  print("text d: " + str(text.dimensions))
+  print("obj d: " +str(obj.dimensions))
+  bpy.ops.object.modifier_add(type='SUBSURF')
+  bpy.context.active_object.modifiers['Subsurf'].levels = 2  # View
+  bpy.context.active_object.modifiers['Subsurf'].render_levels = 2  # Render
+  bpy.context.active_object.modifiers['Subsurf'].subdivision_type = "SIMPLE"
+  bpy.ops.object.modifier_add(type='SHRINKWRAP')
+  bpy.context.active_object.modifiers['Shrinkwrap'].target = obj
+  bpy.context.active_object.modifiers['Shrinkwrap'].offset = 0.01
+  bpy.context.active_object.modifiers['Shrinkwrap'].wrap_method = "PROJECT"
+  bpy.context.active_object.modifiers['Shrinkwrap'].use_project_z = True
+
   text.rotation_euler = (1.5, 0, 1.0)
-  m = text.new('My SubDiv', 'SUBSURF')
-  m.levels = 1
-  m.render_levels = 2
-  m.subdivision_type = "SIMPLE"
-
-
-  # shrink wrap the text to the object
-
-  # integrate into pipeline
-
-  # load fonts
-
-  # load text dataset (w/ entities?)
-
-  # randomize text sizes, styles and locations on the objects
-
-
-
-  # Excess crap
-  # myFontCurve = bpy.data.curves.new(type="FONT", name="myFontCurve")
-  # myFontOb = bpy.data.objects.new("myFontOb", myFontCurve)
-  # myFontOb.data.body = "my text"
-  # bpy.context.scene.objects.link(myFontOb)
-  # bpy.context.scene.update()
-  # vert_list = [cube.matrix_world * v.co for v in cube.data.vertices]
-  # face_verts = [cube.matrix_world * v.co for v in bm.faces[0]]
-
-  # Ensure we are in edit mode and get a bmesh / bbox of the cube
-  # bpy.ops.object.mode_set(mode='EDIT')
-  # bpy.ops.mesh.normals_make_consistent(inside=False)
-  # bm = bmesh.from_edit_mesh(cube.data)
-  # bbox = [x[:] for x in cube.bound_box]
 
 
 def load_materials(material_dir):

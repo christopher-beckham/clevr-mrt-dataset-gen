@@ -6,7 +6,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from __future__ import print_function
-import math, sys, random, argparse, json, os, tempfile
+import math, sys, random, argparse, json, os, tempfile, string
 from datetime import datetime as dt
 from collections import Counter
 
@@ -74,7 +74,7 @@ parser.add_argument('--margin', default=0.4, type=float,
     help="Along all cardinal directions (left, right, front, back), all " +
          "objects will be at least this distance apart. This makes resolving " +
          "spatial relationships slightly less ambiguous.")
-parser.add_argument('--min_pixels_per_object', default=200, type=int,
+parser.add_argument('--min_pixels_per_object', default=100, type=int, # default 200
     help="All objects will have at least this many visible pixels in the " +
          "final rendered images; this ensures that no objects are fully " +
          "occluded by other objects.")
@@ -283,7 +283,7 @@ def render_scene(args,
   plane_behind = (cam_behind - cam_behind.project(plane_normal)).normalized()
   plane_left = (cam_left - cam_left.project(plane_normal)).normalized()
   plane_up = cam_up.project(plane_normal).normalized()
-  camera.location[2] = 0.2
+  # camera.location[2] = 0.2 # if you want to lower the camera
 
   # Delete the plane; we only used it for normals anyway. The base scene file
   # contains the actual ground plane.
@@ -352,6 +352,7 @@ def add_random_objects(scene_struct, num_objects, args, camera):
   positions = []
   objects = []
   blender_objects = []
+  text_objects = []
   for i in range(num_objects):
     # Choose a random size
     size_name, r = random.choice(size_mapping)
@@ -367,6 +368,8 @@ def add_random_objects(scene_struct, num_objects, args, camera):
       if num_tries > args.max_retries:
         for obj in blender_objects:
           utils.delete_object(obj)
+        for text in text_objects:
+          utils.delete_object(text)
         return add_random_objects(scene_struct, num_objects, args, camera)
       x = random.uniform(-3, 3)
       y = random.uniform(-3, 3)
@@ -422,6 +425,20 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     mat_name, mat_name_out = random.choice(material_mapping)
     utils.add_material(mat_name, Color=rgba)
 
+    # Generate Text
+    num_chars = random.choice(range(10))
+    chars = "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
+
+    # Add text
+    utils.add_text(chars)
+
+    # Select material and color for text
+    mat_name, mat_name_out = random.choice(material_mapping)
+    color_name, rgba = random.choice(list(color_name_to_rgba.items()))
+    utils.add_material(mat_name, Color=rgba)
+    text = bpy.context.object
+    text_objects.append(text)
+
     # Record data about the object in the scene data structure
     pixel_coords = utils.get_camera_coords(camera, obj.location)
     objects.append({
@@ -436,13 +453,15 @@ def add_random_objects(scene_struct, num_objects, args, camera):
 
   # Check that all objects are at least partially visible in the rendered image
   all_visible = check_visibility(blender_objects, args.min_pixels_per_object)
-  if not all_visible:
-    # If any of the objects are fully occluded then start over; delete all
-    # objects from the scene and place them all again.
-    print('Some objects are occluded; replacing objects')
-    for obj in blender_objects:
-      utils.delete_object(obj)
-    return add_random_objects(scene_struct, num_objects, args, camera)
+  # if not all_visible:
+  #   # If any of the objects are fully occluded then start over; delete all
+  #   # objects from the scene and place them all again.
+  #   print('Some objects are occluded; replacing objects')
+  #   for obj in blender_objects:
+  #     utils.delete_object(obj)
+  #   for text in text_objects:
+  #     utils.delete_object(text)
+  #   return add_random_objects(scene_struct, num_objects, args, camera)
 
   return objects, blender_objects
 
@@ -486,6 +505,7 @@ def check_visibility(blender_objects, min_pixels_per_object):
   Returns True if all objects are visible and False otherwise.
   """
   f, path = tempfile.mkstemp(suffix='.png')
+
   object_colors = render_shadeless(blender_objects, path=path)
   img = bpy.data.images.load(path)
   p = list(img.pixels)
@@ -495,6 +515,7 @@ def check_visibility(blender_objects, min_pixels_per_object):
   if len(color_count) != len(blender_objects) + 1:
     return False
   for _, count in color_count.most_common():
+    # import pdb; pdb.set_trace()
     if count < min_pixels_per_object:
       return False
   return True
