@@ -173,18 +173,19 @@ def add_text(body):
   bpy.context.active_object.modifiers['Subsurf'].levels = 2  # View
   bpy.context.active_object.modifiers['Subsurf'].render_levels = 2  # Render
   bpy.context.active_object.modifiers['Subsurf'].subdivision_type = "SIMPLE"
-  cam_loc = bpy.data.objects["Camera"].location
-  (hit, loc, norm, face_index) = obj.closest_point_on_mesh(cam_loc)
+
+  # TODO: center align text instead of this
   text_location = obj.location.copy()
-  text_location[0] = text_location[0] - .29 * obj.dimensions[0]
-  text_location[1] = text_location[1] - .29 * obj.dimensions[1]
-  bpy.context.scene.update()
+  # text_location[0] = text_location[0] - .29 * obj.dimensions[0]
+  # text_location[1] = text_location[1] - .29 * obj.dimensions[1]
+  # bpy.context.scene.update()
 
   bpy.ops.object.text_add(location=text_location)
   text = bpy.context.active_object
   text.data.body = body
   text.data.extrude = 0.03
   text.data.size = 0.3
+  text.data.align_x = "CENTER"
 
   # load and set font
   font_dir = "data/fonts"
@@ -199,12 +200,19 @@ def add_text(body):
   if text.dimensions[1] > obj.dimensions[1]:
     text.dimensions[1] = obj.dimensions[1] - 0.1
   bpy.context.scene.update()
-  print("text d: " + str(text.dimensions))
-  print("obj d: " +str(obj.dimensions))
+
   bpy.ops.object.modifier_add(type='SUBSURF')
   bpy.context.active_object.modifiers['Subsurf'].levels = 2  # View
   bpy.context.active_object.modifiers['Subsurf'].render_levels = 2  # Render
   bpy.context.active_object.modifiers['Subsurf'].subdivision_type = "SIMPLE"
+
+  # Split Text into characters. TODO: Throw out any words containing seperated
+  # bpy.ops.object.convert(target="MESH")
+  # bpy.ops.object.mode_set(mode='EDIT')
+  # bpy.ops.mesh.select_all(action='SELECT')
+  # bpy.ops.mesh.separate(type='LOOSE')
+  # bpy.ops.object.mode_set(mode='OBJECT')
+
   bpy.ops.object.modifier_add(type='SHRINKWRAP')
   bpy.context.active_object.modifiers['Shrinkwrap'].target = obj
   bpy.context.active_object.modifiers['Shrinkwrap'].offset = 0.01
@@ -212,7 +220,6 @@ def add_text(body):
   bpy.context.active_object.modifiers['Shrinkwrap'].use_project_z = True
 
   text.rotation_euler = (1.5, 0, 1.0)
-
 
 def load_materials(material_dir):
   """
