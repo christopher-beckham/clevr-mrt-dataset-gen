@@ -5,6 +5,7 @@
     "ObjectSet": null,
     "Integer": null,
     "Bool": null,
+    "Text": [],
     "Shape": [
       "cube", "sphere", "cylinder"
     ],
@@ -86,6 +87,12 @@
       "name": "count",
       "inputs": ["ObjectSet"],
       "output": "Integer",
+      "terminal": true
+    },
+    {
+      "name": "query_text",
+      "inputs": ["Object"],
+      "output": "Text",
       "terminal": true
     },
     {

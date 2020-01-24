@@ -199,8 +199,6 @@ def add_text(body):
   if text.dimensions[1] > obj.dimensions[1]:
     text.dimensions[1] = obj.dimensions[1] - 0.1
   bpy.context.scene.update()
-  print("text d: " + str(text.dimensions))
-  print("obj d: " +str(obj.dimensions))
   bpy.ops.object.modifier_add(type='SUBSURF')
   bpy.context.active_object.modifiers['Subsurf'].levels = 2  # View
   bpy.context.active_object.modifiers['Subsurf'].render_levels = 2  # Render
