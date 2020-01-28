@@ -7,8 +7,9 @@
 
 import sys, random, os
 import bpy, bpy_extras
-
-
+import numpy as np
+from mathutils import Vector
+from bpy_extras.object_utils import world_to_camera_view
 """
 Some utility functions for interacting with Blender
 """
@@ -100,7 +101,6 @@ def add_object(object_dir, name, scale, loc, theta=0):
 
   # Set the new object as active, then rotate, scale, and translate it
   x, y = loc
-  # import pdb; pdb.set_trace()
 
   bpy.context.scene.objects.active = bpy.data.objects[new_name]
   bpy.context.object.rotation_euler[2] = theta
@@ -201,19 +201,43 @@ def add_text(body):
   bpy.context.active_object.modifiers['Subsurf'].render_levels = 2  # Render
   bpy.context.active_object.modifiers['Subsurf'].subdivision_type = "SIMPLE"
 
-  # Split Text into characters. TODO: Throw out any words containing seperated
-  # bpy.ops.object.convert(target="MESH")
-  # bpy.ops.object.mode_set(mode='EDIT')
-  # bpy.ops.mesh.select_all(action='SELECT')
-  # bpy.ops.mesh.separate(type='LOOSE')
-  # bpy.ops.object.mode_set(mode='OBJECT')
-
   bpy.ops.object.modifier_add(type='SHRINKWRAP')
   bpy.context.active_object.modifiers['Shrinkwrap'].target = obj
   bpy.context.active_object.modifiers['Shrinkwrap'].offset = 0.01
   bpy.context.active_object.modifiers['Shrinkwrap'].wrap_method = "PROJECT"
   bpy.context.active_object.modifiers['Shrinkwrap'].use_project_z = True
   text.rotation_euler = (1.5, 0, 1.0)
+
+  # split text into characters
+  bpy.context.scene.update()
+
+  # copy the existing text then smash it apart and get char-level bboxes
+  bpy.ops.object.duplicate()
+  bpy.ops.object.convert(target="MESH")
+  bpy.ops.object.mode_set(mode='EDIT')
+  bpy.ops.mesh.select_all(action='SELECT')
+  bpy.ops.mesh.separate(type='LOOSE')
+  bpy.ops.object.mode_set(mode='OBJECT')
+
+  char_bboxes = []
+  for i, o in enumerate(bpy.context.selected_objects):
+    # Rename object by the material applied to it
+    #o.name = body[len(body) - i - 1]
+    print(np.array(o.bound_box))
+
+    # obj = bpy.context.object  # or bpy.data.objects['cube']
+    bb_vertices = [Vector(v) for v in obj.bound_box]
+    mat = obj.matrix_world
+    world_bb_vertices = [mat * v for v in bb_vertices]
+    scene = bpy.context.scene
+    co_2d = [world_to_camera_view(scene, scene.camera, v) for v in world_bb_vertices]  # from 0 to 1
+
+    render_scale = scene.render.resolution_percentage / 100
+    render_size = list(int(res) * render_scale for res in [scene.render.resolution_x, scene.render.resolution_y])
+    pixel_coords = [(c.x * render_size[0], c.y * render_size[1]) for c in co_2d]  # in pixels
+    char_bboxes.append(pixel_coords)
+  bpy.context.scene.objects.active = text
+  return char_bboxes
 
 def load_materials(material_dir):
   """

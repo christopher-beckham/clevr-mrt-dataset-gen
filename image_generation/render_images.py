@@ -440,23 +440,24 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     })
 
     # Generate Text
-    num_chars = random.choice(range(10))
+    num_chars = random.choice(range(1, 10))
     chars = "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
 
     # Add text to Blender
-    utils.add_text(chars)
+    char_bboxes = utils.add_text(chars)
 
     # Select material and color for text
     mat_name, mat_name_out = random.choice(material_mapping)
     color_name, rgba = random.choice(list(color_name_to_rgba.items()))
     utils.add_material(mat_name, Color=rgba)
-    text = bpy.context.object
+    text = bpy.context.scene.objects.active
     blender_texts.append(text)
     objects[-1]['text'] = {
       "body": text.data.body,
       "3d_coords": tuple(text.location),
       "pixel_coords": utils.get_camera_coords(camera, text.location),
       "color": color_name,
+      "char_bboxes": char_bboxes
     }
 
 
