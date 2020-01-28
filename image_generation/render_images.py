@@ -74,7 +74,7 @@ parser.add_argument('--margin', default=0.4, type=float,
     help="Along all cardinal directions (left, right, front, back), all " +
          "objects will be at least this distance apart. This makes resolving " +
          "spatial relationships slightly less ambiguous.")
-parser.add_argument('--min_pixels_per_object', default=100, type=int, # default 200
+parser.add_argument('--min_pixels_per_object', default=200, type=int,
     help="All objects will have at least this many visible pixels in the " +
          "final rendered images; this ensures that no objects are fully " +
          "occluded by other objects.")
@@ -309,10 +309,11 @@ def render_scene(args,
       bpy.data.objects['Lamp_Fill'].location[i] += rand(args.fill_light_jitter)
 
   # Now make some random objects
-  objects, blender_objects = add_random_objects(scene_struct, num_objects, args, camera)
+  texts, blender_texts, objects, blender_objects = add_random_objects(scene_struct, num_objects, args, camera)
 
   # Render the scene and dump the scene data structure
   scene_struct['objects'] = objects
+  scene_struct['texts'] = texts
   scene_struct['relationships'] = compute_all_relationships(scene_struct)
   while True:
     try:
@@ -352,7 +353,8 @@ def add_random_objects(scene_struct, num_objects, args, camera):
   positions = []
   objects = []
   blender_objects = []
-  text_objects = []
+  texts = []
+  blender_texts = []
   for i in range(num_objects):
     # Choose a random size
     size_name, r = random.choice(size_mapping)
@@ -368,7 +370,7 @@ def add_random_objects(scene_struct, num_objects, args, camera):
       if num_tries > args.max_retries:
         for obj in blender_objects:
           utils.delete_object(obj)
-        for text in text_objects:
+        for text in blender_texts:
           utils.delete_object(text)
         return add_random_objects(scene_struct, num_objects, args, camera)
       x = random.uniform(-3, 3)
@@ -425,20 +427,6 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     mat_name, mat_name_out = random.choice(material_mapping)
     utils.add_material(mat_name, Color=rgba)
 
-    # Generate Text
-    num_chars = random.choice(range(10))
-    chars = "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
-
-    # Add text
-    utils.add_text(chars)
-
-    # Select material and color for text
-    mat_name, mat_name_out = random.choice(material_mapping)
-    color_name, rgba = random.choice(list(color_name_to_rgba.items()))
-    utils.add_material(mat_name, Color=rgba)
-    text = bpy.context.object
-    text_objects.append(text)
-
     # Record data about the object in the scene data structure
     pixel_coords = utils.get_camera_coords(camera, obj.location)
     objects.append({
@@ -451,6 +439,27 @@ def add_random_objects(scene_struct, num_objects, args, camera):
       'color': color_name,
     })
 
+    # Generate Text
+    num_chars = random.choice(range(10))
+    chars = "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
+
+    # Add text to Blender
+    utils.add_text(chars)
+
+    # Select material and color for text
+    mat_name, mat_name_out = random.choice(material_mapping)
+    color_name, rgba = random.choice(list(color_name_to_rgba.items()))
+    utils.add_material(mat_name, Color=rgba)
+    text = bpy.context.object
+    blender_texts.append(text)
+    objects[-1]['text'] = {
+      "body": text.data.body,
+      "3d_coords": tuple(text.location),
+      "pixel_coords": utils.get_camera_coords(camera, text.location),
+      "color": color_name,
+    }
+
+
   # Check that all objects are at least partially visible in the rendered image
   all_visible = check_visibility(blender_objects, args.min_pixels_per_object)
   # if not all_visible:
@@ -459,11 +468,11 @@ def add_random_objects(scene_struct, num_objects, args, camera):
   #   print('Some objects are occluded; replacing objects')
   #   for obj in blender_objects:
   #     utils.delete_object(obj)
-  #   for text in text_objects:
+  #   for text in blender_texts:
   #     utils.delete_object(text)
   #   return add_random_objects(scene_struct, num_objects, args, camera)
 
-  return objects, blender_objects
+  return texts, blender_texts, objects, blender_objects
 
 
 def compute_all_relationships(scene_struct, eps=0.2):

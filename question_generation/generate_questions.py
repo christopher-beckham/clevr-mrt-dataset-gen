@@ -9,7 +9,7 @@ from __future__ import print_function
 import argparse, json, os, itertools, random, shutil
 import time
 import re
-
+from collections import defaultdict
 import question_engine as qeng
 
 """
@@ -242,7 +242,7 @@ def other_heuristic(text, param_vals):
 def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
                               synonyms, max_instances=None, verbose=False):
 
-  param_name_to_type = {p['name']: p['type'] for p in template['params']} 
+  param_name_to_type = {p['name']: p['type'] for p in template['params']}
 
   initial_state = {
     'nodes': [node_shallow_copy(template['nodes'][0])],
@@ -257,6 +257,7 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
 
     # Check to make sure the current state is valid
     q = {'nodes': state['nodes']}
+
     outputs = qeng.answer_question(q, metadata, scene_struct, all_outputs=True)
     answer = outputs[-1]
     if answer == '__INVALID__': continue
@@ -312,17 +313,20 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
     if state['next_template_node'] == len(template['nodes']):
       # Use our rejection sampling heuristics to decide whether we should
       # keep this template instantiation
+      import pdb; pdb.set_trace()
       cur_answer_count = answer_counts[answer]
       answer_counts_sorted = sorted(answer_counts.values())
       median_count = answer_counts_sorted[len(answer_counts_sorted) // 2]
       median_count = max(median_count, 5)
-      if cur_answer_count > 1.1 * answer_counts_sorted[-2]:
-        if verbose: print('skipping due to second count')
-        continue
-      if cur_answer_count > 5.0 * median_count:
-        if verbose: print('skipping due to median')
-        continue
-
+      try:
+        if cur_answer_count > 1.1 * answer_counts_sorted[-2]:
+          if verbose: print('skipping due to second count')
+          continue
+        if cur_answer_count > 5.0 * median_count:
+          if verbose: print('skipping due to median')
+          continue
+      except Exception:
+        pass
       # If the template contains a raw relate node then we need to check for
       # degeneracy at the end
       has_relate = any(n['type'] == 'relate' for n in template['nodes'])
@@ -345,7 +349,7 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
     next_node = node_shallow_copy(next_node)
 
     special_nodes = {
-        'filter_unique', 'filter_count', 'filter_exist', 'filter',
+        'filter_unique', 'filter_count', 'filter_exist', 'filter_text', 'filter',
         'relate_filter', 'relate_filter_unique', 'relate_filter_count',
         'relate_filter_exist',
     }
@@ -435,6 +439,9 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
         })
 
     elif 'side_inputs' in next_node:
+      import pdb;
+      pdb.set_trace()
+
       # If the next node has template parameters, expand them out
       # TODO: Generalize this to work for nodes with more than one side input
       assert len(next_node['side_inputs']) == 1, 'NOT IMPLEMENTED'
@@ -573,7 +580,9 @@ def main(args):
       if final_dtype == 'Integer':
         if metadata['dataset'] == 'CLEVR-v1.0':
           answers = list(range(0, 11))
-      template_answer_counts[key[:2]] = {}
+      if final_dtype == 'Text':
+        answers = []
+      template_answer_counts[key[:2]] = defaultdict(int)
       for a in answers:
         template_answer_counts[key[:2]][a] = 0
     return template_counts, template_answer_counts
@@ -622,6 +631,7 @@ def main(args):
         print('trying template ', fn, idx)
       if args.time_dfs and args.verbose:
         tic = time.time()
+
       ts, qs, ans = instantiate_templates_dfs(
                       scene_struct,
                       template,

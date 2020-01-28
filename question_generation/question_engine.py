@@ -115,6 +115,8 @@ def make_query_handler(attribute):
       return '__INVALID__'
     elif type(val) == list and len(val) == 1:
       return val[0]
+    elif type(val) == dict:
+      return val['body']
     else:
       return val
   return query_handler
@@ -154,6 +156,7 @@ execute_handlers = {
   'filter_shape': make_filter_handler('shape'),
   'filter_material': make_filter_handler('material'),
   'filter_size': make_filter_handler('size'),
+  'filter_text': make_filter_handler('text'),
   'filter_objectcategory': make_filter_handler('objectcategory'),
   'unique': unique_handler,
   'relate': relate_handler,
@@ -164,6 +167,7 @@ execute_handlers = {
   'query_shape': make_query_handler('shape'),
   'query_material': make_query_handler('material'),
   'query_size': make_query_handler('size'),
+  'query_text': make_query_handler('text'),
   'exist': exist_handler,
   'equal_color': equal_handler,
   'equal_shape': equal_handler,
@@ -193,6 +197,7 @@ def answer_question(question, metadata, scene_struct, all_outputs=False,
   """
   all_input_types, all_output_types = [], []
   node_outputs = []
+
   for node in question['nodes']:
     if cache_outputs and '_output' in node:
       node_output = node['_output']
