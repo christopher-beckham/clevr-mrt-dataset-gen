@@ -168,23 +168,19 @@ def add_object(object_dir, name, scale, loc, theta=0):
 
 
 def add_text(body):
+  # Take the current object and "increase the resolution"
   obj = bpy.context.active_object
   bpy.ops.object.modifier_add(type='SUBSURF')
   bpy.context.active_object.modifiers['Subsurf'].levels = 2  # View
   bpy.context.active_object.modifiers['Subsurf'].render_levels = 2  # Render
   bpy.context.active_object.modifiers['Subsurf'].subdivision_type = "SIMPLE"
 
-  # TODO: center align text instead of this
-  text_location = obj.location.copy()
-  # text_location[0] = text_location[0] - .29 * obj.dimensions[0]
-  # text_location[1] = text_location[1] - .29 * obj.dimensions[1]
-  # bpy.context.scene.update()
-
-  bpy.ops.object.text_add(location=text_location)
+  # Create the text at the location where the object is
+  bpy.ops.object.text_add(location=obj.location.copy())
   text = bpy.context.active_object
   text.data.body = body
   text.data.extrude = 0.03
-  text.data.size = 0.3
+  text.data.size = 0.5
   text.data.align_x = "CENTER"
 
   # load and set font
@@ -194,7 +190,7 @@ def add_text(body):
   font = bpy.data.fonts.load(font_path)
   text.data.font = font
 
-  bpy.context.scene.update()
+  # tweak the size of the text
   if text.dimensions[0] > obj.dimensions[0]:
     text.dimensions[0] = obj.dimensions[0] - 0.3
   if text.dimensions[1] > obj.dimensions[1]:
@@ -218,7 +214,6 @@ def add_text(body):
   bpy.context.active_object.modifiers['Shrinkwrap'].offset = 0.01
   bpy.context.active_object.modifiers['Shrinkwrap'].wrap_method = "PROJECT"
   bpy.context.active_object.modifiers['Shrinkwrap'].use_project_z = True
-
   text.rotation_euler = (1.5, 0, 1.0)
 
 def load_materials(material_dir):
