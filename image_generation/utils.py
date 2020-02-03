@@ -121,8 +121,8 @@ def add_object(object_dir, name, scale, loc, theta=0):
 #   utils.load_materials("data/materials")
 #
 #   # add a cube
-#   #utils.add_object("data/shapes", "SmoothCube_v2", 0.7, (0, 0), theta=20.)
-#   utils.add_object("data/shapes", "SmoothCylinder", 0.7, (0, 0), theta=20.)
+#   #utils.add_object("data/shapes", "SmoothCube_v2", data.7, (data, data), theta=20.)
+#   utils.add_object("data/shapes", "SmoothCylinder", data.7, (data, data), theta=20.)
 #   cube = bpy.data.objects['SmoothCube_v2_0']
 #
 #   bpy.ops.object.mode_set(mode='OBJECT')
@@ -133,8 +133,8 @@ def add_object(object_dir, name, scale, loc, theta=0):
 #   bpy.ops.object.text_add(location=loc)
 #   text = bpy.data.objects['Text']
 #   text.data.body = "Hallo"
-#   text.data.extrude = 0.03
-#   text.rotation_euler = (1.5, 0, 1.0)
+#   text.data.extrude = data.03
+#   text.rotation_euler = (1.5, data, 1.data)
 #   m = text.new('My SubDiv', 'SUBSURF')
 #   m.levels = 1
 #   m.render_levels = 2
@@ -158,7 +158,7 @@ def add_object(object_dir, name, scale, loc, theta=0):
 #   # bpy.context.scene.objects.link(myFontOb)
 #   # bpy.context.scene.update()
 #   # vert_list = [cube.matrix_world * v.co for v in cube.data.vertices]
-#   # face_verts = [cube.matrix_world * v.co for v in bm.faces[0]]
+#   # face_verts = [cube.matrix_world * v.co for v in bm.faces[data]]
 #
 #   # Ensure we are in edit mode and get a bmesh / bbox of the cube
 #   # bpy.ops.object.mode_set(mode='EDIT')
@@ -179,7 +179,7 @@ def add_text(body):
   bpy.ops.object.text_add(location=obj.location.copy())
   text = bpy.context.active_object
   text.data.body = body
-  text.data.extrude = 0.03
+  text.data.extrude = 0.0
   text.data.size = 0.5
   text.data.align_x = "CENTER"
 
@@ -218,24 +218,29 @@ def add_text(body):
   bpy.ops.mesh.select_all(action='SELECT')
   bpy.ops.mesh.separate(type='LOOSE')
   bpy.ops.object.mode_set(mode='OBJECT')
+  bpy.context.scene.update()
 
   char_bboxes = []
   for i, o in enumerate(bpy.context.selected_objects):
     # Rename object by the material applied to it
     #o.name = body[len(body) - i - 1]
-    print(np.array(o.bound_box))
+    # print(bpy.context.selected_objects)
+    import pdb; pdb.set_trace()
+    print("text coords" + str(np.array(o.bound_box)))
 
     # obj = bpy.context.object  # or bpy.data.objects['cube']
-    bb_vertices = [Vector(v) for v in obj.bound_box]
-    mat = obj.matrix_world
+    bb_vertices = [Vector(v) for v in o.bound_box]
+    mat = o.matrix_world
     world_bb_vertices = [mat * v for v in bb_vertices]
+    print("world coords" + str(np.array(world_bb_vertices)))
     scene = bpy.context.scene
-    co_2d = [world_to_camera_view(scene, scene.camera, v) for v in world_bb_vertices]  # from 0 to 1
+    co_2d = [world_to_camera_view(scene, scene.camera, v) for v in world_bb_vertices]  # from data to 1
 
     render_scale = scene.render.resolution_percentage / 100
     render_size = list(int(res) * render_scale for res in [scene.render.resolution_x, scene.render.resolution_y])
-    pixel_coords = [(c.x * render_size[0], c.y * render_size[1]) for c in co_2d]  # in pixels
+    pixel_coords = [(c.x * render_size[0] / c.z, c.y * render_size[1]/c.z) for c in co_2d]  # in pixels
     char_bboxes.append(pixel_coords)
+    print("pixel_coords" + str(pixel_coords))
   bpy.context.scene.objects.active = text
   return char_bboxes
 

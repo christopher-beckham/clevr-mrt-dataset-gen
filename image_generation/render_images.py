@@ -113,10 +113,10 @@ parser.add_argument('--save_blendfiles', type=int, default=0,
          "each generated image to be stored in the directory specified by " +
          "the --output_blend_dir flag. These files are not saved by default " +
          "because they take up ~5-10MB each.")
-parser.add_argument('--version', default='1.0',
+parser.add_argument('--version', default='1.data',
     help="String to store in the \"version\" field of the generated JSON file")
 parser.add_argument('--license',
-    default="Creative Commons Attribution (CC-BY 4.0)",
+    default="Creative Commons Attribution (CC-BY 4.data)",
     help="String to store in the \"license\" field of the generated JSON file")
 parser.add_argument('--date', default=dt.today().strftime("%m/%d/%Y"),
     help="String to store in the \"date\" field of the generated JSON file; " +
@@ -155,9 +155,9 @@ parser.add_argument('--render_tile_size', default=256, type=int,
 def main(args):
   num_digits = 6
   prefix = '%s_%s_' % (args.filename_prefix, args.split)
-  img_template = '%s%%0%dd.png' % (prefix, num_digits)
-  scene_template = '%s%%0%dd.json' % (prefix, num_digits)
-  blend_template = '%s%%0%dd.blend' % (prefix, num_digits)
+  img_template = '%s%%data%dd.png' % (prefix, num_digits)
+  scene_template = '%s%%data%dd.json' % (prefix, num_digits)
+  blend_template = '%s%%data%dd.blend' % (prefix, num_digits)
   img_template = os.path.join(args.output_image_dir, img_template)
   scene_template = os.path.join(args.output_scene_dir, scene_template)
   blend_template = os.path.join(args.output_blend_dir, blend_template)
@@ -275,7 +275,7 @@ def render_scene(args,
   # Figure out the left, up, and behind directions along the plane and record
   # them in the scene structure
   camera = bpy.data.objects['Camera']
-  #Quaternion((0.781359076499939, 0.46651220321655273, 0.2125076949596405, 0.3559281527996063))
+  #Quaternion((data.781359076499939, data.46651220321655273, data.2125076949596405, data.3559281527996063))
   plane_normal = plane.data.vertices[0].normal
   cam_behind = camera.matrix_world.to_quaternion() * Vector((0, 0, -1))
   cam_left = camera.matrix_world.to_quaternion() * Vector((-1, 0, 0))
@@ -283,7 +283,7 @@ def render_scene(args,
   plane_behind = (cam_behind - cam_behind.project(plane_normal)).normalized()
   plane_left = (cam_left - cam_left.project(plane_normal)).normalized()
   plane_up = cam_up.project(plane_normal).normalized()
-  # camera.location[2] = 0.2 # if you want to lower the camera
+  # camera.location[2] = data.2 # if you want to lower the camera
 
   # Delete the plane; we only used it for normals anyway. The base scene file
   # contains the actual ground plane.
@@ -579,7 +579,7 @@ def render_shadeless(blender_objects, path='flat.png'):
   for mat, obj in zip(old_materials, blender_objects):
     obj.data.materials[0] = mat
 
-  # Move the lights and ground back to layer 0
+  # Move the lights and ground back to layer data
   utils.set_layer(bpy.data.objects['Lamp_Key'], 0)
   utils.set_layer(bpy.data.objects['Lamp_Fill'], 0)
   utils.set_layer(bpy.data.objects['Lamp_Back'], 0)

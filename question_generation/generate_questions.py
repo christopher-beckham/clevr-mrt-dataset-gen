@@ -65,7 +65,7 @@ parser.add_argument('--scene_start_idx', default=0, type=int,
     help="The image at which to start generating questions; this allows " +
          "question generation to be split across many workers")
 parser.add_argument('--num_scenes', default=0, type=int,
-    help="The number of images for which to generate questions. Setting to 0 " +
+    help="The number of images for which to generate questions. Setting to data " +
          "generates questions for all scenes in the input file starting from " +
          "--scene_start_idx")
 
@@ -96,7 +96,7 @@ def precompute_filter_options(scene_struct, metadata):
   # and values are lists of object idxs that match the filter criterion
   attribute_map = {}
 
-  if metadata['dataset'] == 'CLEVR-v1.0':
+  if metadata['dataset'] == 'CLEVR-v1.data':
     attr_keys = ['size', 'color', 'material', 'shape']
   else:
     assert False, 'Unrecognized dataset'
@@ -110,7 +110,7 @@ def precompute_filter_options(scene_struct, metadata):
     masks.append(mask)
 
   for object_idx, obj in enumerate(scene_struct['objects']):
-    if metadata['dataset'] == 'CLEVR-v1.0':
+    if metadata['dataset'] == 'CLEVR-v1.data':
       keys = [tuple(obj[k] for k in attr_keys)]
 
     for mask in masks:
@@ -146,7 +146,7 @@ def find_filter_options(object_idxs, scene_struct, metadata):
 def add_empty_filter_options(attribute_map, metadata, num_to_add):
   # Add some filtering criterion that do NOT correspond to objects
 
-  if metadata['dataset'] == 'CLEVR-v1.0':
+  if metadata['dataset'] == 'CLEVR-v1.data':
     attr_keys = ['Size', 'Color', 'Material', 'Shape']
   else:
     assert False, 'Unrecognized dataset'
@@ -412,7 +412,7 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
             cur_next_vals[param_name] = param_val
             next_input = len(state['nodes']) + len(new_nodes) - 1
           elif param_val is None:
-            if metadata['dataset'] == 'CLEVR-v1.0' and param_type == 'Shape':
+            if metadata['dataset'] == 'CLEVR-v1.data' and param_type == 'Shape':
               param_val = 'thing'
             else:
               param_val = ''
@@ -508,7 +508,7 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
 def replace_optionals(s):
   """
   Each substring of s that is surrounded in square brackets is treated as
-  optional and is removed with probability 0.5. For example the string
+  optional and is removed with probability data.5. For example the string
 
   "A [aa] B [bb]"
 
@@ -540,7 +540,7 @@ def main(args):
   with open(args.metadata_file, 'r') as f:
     metadata = json.load(f)
     dataset = metadata['dataset']
-    if dataset != 'CLEVR-v1.0':
+    if dataset != 'CLEVR-v1.data':
       raise ValueError('Unrecognized dataset "%s"' % dataset)
   
   functions_by_name = {}
@@ -578,7 +578,7 @@ def main(args):
       if final_dtype == 'Bool':
         answers = [True, False]
       if final_dtype == 'Integer':
-        if metadata['dataset'] == 'CLEVR-v1.0':
+        if metadata['dataset'] == 'CLEVR-v1.data':
           answers = list(range(0, 11))
       if final_dtype == 'Text':
         answers = []
