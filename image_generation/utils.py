@@ -165,7 +165,12 @@ def add_object(object_dir, name, scale, loc, theta=0):
 #   # bpy.ops.mesh.normals_make_consistent(inside=False)
 #   # bm = bmesh.from_edit_mesh(cube.data)
 #   # bbox = [x[:] for x in cube.bound_box]
-
+def makeInvisible(ob):
+  for child in ob.children:
+    child.hide = True
+    # call the function on the child to catch all its children
+    # as there is no ob.children_recursive attribute
+    makeInvisible(child)
 
 def add_text(body):
   # Take the current object and "increase the resolution"
@@ -196,6 +201,8 @@ def add_text(body):
   if text.dimensions[1] > obj.dimensions[1]:
     text.dimensions[1] = obj.dimensions[1] - 0.1
   bpy.context.scene.update()
+
+  # Increase text mesh resolution and rotate
   bpy.ops.object.modifier_add(type='SUBSURF')
   bpy.context.active_object.modifiers['Subsurf'].levels = 2  # View
   bpy.context.active_object.modifiers['Subsurf'].render_levels = 2  # Render
@@ -211,7 +218,7 @@ def add_text(body):
   # split text into characters
   bpy.context.scene.update()
 
-  # copy the existing text then smash it apart and get char-level bboxes
+  # copy the existing text then break into characters
   bpy.ops.object.duplicate()
   bpy.ops.object.convert(target="MESH")
   bpy.ops.object.mode_set(mode='EDIT')
@@ -220,27 +227,51 @@ def add_text(body):
   bpy.ops.object.mode_set(mode='OBJECT')
   bpy.context.scene.update()
 
+  chars = bpy.context.selected_objects[:-1]
+  bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS', center='BOUNDS')
+  bpy.context.scene.objects.active = text
+  makeInvisible(text)
+
+  # to_delete = bpy.context.selected_objects[-1]
+  # bpy.ops.object.select_all(action='DESELECT')
+  # bpy.data.objects[to_delete.name].select = True
+  # bpy.ops.object.delete()
+
   char_bboxes = []
-  for i, o in enumerate(bpy.context.selected_objects):
-    # Rename object by the material applied to it
+  for i, o in enumerate(chars):
     #o.name = body[len(body) - i - 1]
     # print(bpy.context.selected_objects)
-    import pdb; pdb.set_trace()
+    # [x.location for x in chars]
     print("text coords" + str(np.array(o.bound_box)))
-
+    # import pdb; pdb.set_trace()
     # obj = bpy.context.object  # or bpy.data.objects['cube']
-    bb_vertices = [Vector(v) for v in o.bound_box]
-    mat = o.matrix_world
-    world_bb_vertices = [mat * v for v in bb_vertices]
-    print("world coords" + str(np.array(world_bb_vertices)))
-    scene = bpy.context.scene
-    co_2d = [world_to_camera_view(scene, scene.camera, v) for v in world_bb_vertices]  # from data to 1
 
-    render_scale = scene.render.resolution_percentage / 100
-    render_size = list(int(res) * render_scale for res in [scene.render.resolution_x, scene.render.resolution_y])
-    pixel_coords = [(c.x * render_size[0] / c.z, c.y * render_size[1]/c.z) for c in co_2d]  # in pixels
-    char_bboxes.append(pixel_coords)
-    print("pixel_coords" + str(pixel_coords))
+    # bb_vertices = [Vector(v) for v in o.bound_box]
+    # for i, v in enumerate(bb_vertices):
+    #   bb_vertices[i] = v + o.location
+    # text_vertices = [Vector(v) for v in text.bound_box]
+
+    # mat = o.matrix_world#.normalized().inverted()
+    # world_bb_vertices = [mat * v for v in bb_vertices]
+    # print("world coords" + str(np.array(world_bb_vertices)))
+    scene = bpy.context.scene
+    camera = scene.camera
+    top_left = get_camera_coords(camera, o.location - o.dimensions/2)
+    bottom_right = get_camera_coords(camera, o.location + o.dimensions/2)
+    o_loc = get_camera_coords(camera, o.location)
+    print(o.location)
+    print(text.location)
+    print(o.dimensions)
+    # import pdb; pdb.set_trace()
+    # pixel_coords = [get_camera_coords(scene.camera, v) for v in bb_vertices]  # from data to 1
+    # text_coords = [get_camera_coords(scene.camera, v) for v in text_vertices]  # from data to 1
+
+    # co_2d = [world_to_camera_view(scene, scene.camera, v) for v in world_bb_vertices]  # from data to 1
+
+    # # render_scale = scene.render.resolution_percentage / 100
+    # # render_size = list(int(res) * render_scale for res in [scene.render.resolution_x, scene.render.resolution_y])
+    # pixel_coords = [(c.x * render_size[0], c.y * render_size[1]) for c in co_2d]  # in pixels
+    char_bboxes.append((o_loc, top_left[0], top_left[1], bottom_right[0], bottom_right[1]))
   bpy.context.scene.objects.active = text
   return char_bboxes
 
