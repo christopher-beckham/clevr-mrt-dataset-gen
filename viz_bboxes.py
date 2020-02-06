@@ -22,7 +22,6 @@ scenes = scenes['scenes']
 scene = scenes[0]
 img = cv2.imread(os.path.join("output/images/", scene['image_filename']))
 objects = scene['objects']
-# import pdb; pdb.set_trace()
 for object in objects:
     text = object['text']
     body = text['body']
@@ -30,9 +29,10 @@ for object in objects:
     char_bboxes = text['char_bboxes']
     # import pdb; pdb.set_trace()
     for bbox in char_bboxes:
-        o_loc = bbox[0]
-        p1 = (int(bbox[1]), int(bbox[2]))
-        p2 = (int(bbox[3]), int(bbox[4]))
+        char = bbox[0]
+        o_loc = bbox[1]
+        p1 = (int(bbox[2]), int(bbox[3]))
+        p2 = (int(bbox[4]), int(bbox[5]))
 
         # import pdb; pdb.set_trace()
         w = (p2[0] - p1[0])
@@ -45,5 +45,7 @@ for object in objects:
         print(p2)
         img = cv2.rectangle(img, p1, p2, (0, 255, 0), 1)
         img = cv2.circle(img, tuple(o_loc[0:2]), 2, (0, 0, 255), 1)
-    cv2.putText(img,text['body'],tuple(text['pixel_coords'][0:2]),cv2.FONT_HERSHEY_COMPLEX,0.5,(0,0,0),1)
+        cv2.putText(img, char, tuple(o_loc[0:2]), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0), 1)
+
+    # cv2.putText(img,text['body'],tuple(text['pixel_coords'][0:2]),cv2.FONT_HERSHEY_COMPLEX,0.5,(0,0,0),1)
 cv2.imwrite('output.png',img)

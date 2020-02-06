@@ -165,12 +165,19 @@ def add_object(object_dir, name, scale, loc, theta=0):
 #   # bpy.ops.mesh.normals_make_consistent(inside=False)
 #   # bm = bmesh.from_edit_mesh(cube.data)
 #   # bbox = [x[:] for x in cube.bound_box]
-def makeInvisible(ob):
+def make_invisible(ob):
   for child in ob.children:
     child.hide = True
     # call the function on the child to catch all its children
     # as there is no ob.children_recursive attribute
-    makeInvisible(child)
+    make_invisible(child)
+
+def make_visible(ob):
+  for child in ob.children:
+    child.hide = False
+    # call the function on the child to catch all its children
+    # as there is no ob.children_recursive attribute
+    make_visible(child)
 
 def load_font(text):
   # load and set font
@@ -204,6 +211,7 @@ def add_text(body):
       load_font(text)
       break
     except Exception as e:
+      num_retries += 1
       print(e)
 
   # tweak the size of the text
@@ -230,7 +238,6 @@ def add_text(body):
   bpy.context.scene.update()
 
   # copy the existing text then break into characters
-  # import pdb; pdb.set_trace()
   bpy.ops.object.duplicate()
   bpy.ops.object.convert(target="MESH")
   bpy.ops.object.mode_set(mode='EDIT')
@@ -239,53 +246,37 @@ def add_text(body):
   bpy.ops.object.mode_set(mode='OBJECT')
   bpy.context.scene.update()
 
-  chars = bpy.context.selected_objects#[:-1]
+  chars = bpy.context.selected_objects
   bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS', center='BOUNDS')
   bpy.context.scene.objects.active = text
-  makeInvisible(text)
+  make_invisible(text)
 
-  # to_delete = bpy.context.selected_objects[-1]
-  # bpy.ops.object.select_all(action='DESELECT')
-  # bpy.data.objects[to_delete.name].select = True
-  # bpy.ops.object.delete()
+  if len(chars) != len(text.data.body):
+    print("wrong number of meshes")
+    raise Exception
 
   char_bboxes = []
   for i, o in enumerate(chars):
-    #o.name = body[len(body) - i - 1]
-    # print(bpy.context.selected_objects)
-    # [x.location for x in chars]
-    print("text coords" + str(np.array(o.bound_box)))
-    # import pdb; pdb.set_trace()
-    # obj = bpy.context.object  # or bpy.data.objects['cube']
-
-    # bb_vertices = [Vector(v) for v in o.bound_box]
-    # for i, v in enumerate(bb_vertices):
-    #   bb_vertices[i] = v + o.location
-    # text_vertices = [Vector(v) for v in text.bound_box]
-
-    # mat = o.matrix_world#.normalized().inverted()
-    # world_bb_vertices = [mat * v for v in bb_vertices]
-    # print("world coords" + str(np.array(world_bb_vertices)))
     scene = bpy.context.scene
     camera = scene.camera
     top_left = get_camera_coords(camera, o.location - o.dimensions/2)
     bottom_right = get_camera_coords(camera, o.location + o.dimensions/2)
     o_loc = get_camera_coords(camera, o.location)
-    print(o.location)
-    print(text.location)
-    print(o.dimensions)
-    # import pdb; pdb.set_trace()
-    # pixel_coords = [get_camera_coords(scene.camera, v) for v in bb_vertices]  # from data to 1
-    # text_coords = [get_camera_coords(scene.camera, v) for v in text_vertices]  # from data to 1
+    char_bboxes.append([o_loc, top_left[0], top_left[1], bottom_right[0], bottom_right[1]])
+    make_invisible(o)
+  char_bboxes = id_chars(text, char_bboxes)
+  make_visible(text)
+  text.data.extrude = 0.03
 
-    # co_2d = [world_to_camera_view(scene, scene.camera, v) for v in world_bb_vertices]  # from data to 1
+  return char_bboxes, chars
 
-    # # render_scale = scene.render.resolution_percentage / 100
-    # # render_size = list(int(res) * render_scale for res in [scene.render.resolution_x, scene.render.resolution_y])
-    # pixel_coords = [(c.x * render_size[0], c.y * render_size[1]) for c in co_2d]  # in pixels
-    char_bboxes.append((o_loc, top_left[0], top_left[1], bottom_right[0], bottom_right[1]))
-  bpy.context.scene.objects.active = text
-  return char_bboxes
+def id_chars(text, char_bboxes):
+  # currently assumes script is written left to right
+  bbox_dict = {bbox[1]:bbox for bbox in char_bboxes}
+  ltr = sorted([bbox[1] for bbox in char_bboxes])
+  for i, k in enumerate(ltr):
+    bbox_dict[k].insert(0, text.data.body[i])
+  return list(bbox_dict.values())
 
 def load_materials(material_dir):
   """

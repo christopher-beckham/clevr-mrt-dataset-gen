@@ -355,6 +355,7 @@ def add_random_objects(scene_struct, num_objects, args, camera):
   blender_objects = []
   texts = []
   blender_texts = []
+  all_chars = []
   for i in range(num_objects):
     # Choose a random size
     size_name, r = random.choice(size_mapping)
@@ -440,17 +441,35 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     })
 
     # Generate Text
-    num_chars = random.choice(range(1, 10))
+    num_chars = random.choice(range(1, 7))
     chars = "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
 
     # Add text to Blender
-    char_bboxes = utils.add_text(chars)
+    try:
+      char_bboxes, chars = utils.add_text(chars)
+
+      all_chars.extend(chars)
+    except Exception as e:
+      utils.delete_object(bpy.context.scene.objects.active)
+      for obj in blender_objects:
+        utils.delete_object(obj)
+      for text in blender_texts:
+        utils.delete_object(text)
+      for obj in bpy.context.scene.objects:
+        if "Text" in obj.name:
+          utils.delete_object(obj)
+      return add_random_objects(scene_struct, num_objects, args, camera)
 
     # Select material and color for text
+    text = bpy.context.scene.objects.active
     mat_name, mat_name_out = random.choice(material_mapping)
     color_name, rgba = random.choice(list(color_name_to_rgba.items()))
     utils.add_material(mat_name, Color=rgba)
-    text = bpy.context.scene.objects.active
+
+    for char in chars:
+      bpy.context.scene.objects.active = char
+      utils.add_material(mat_name, Color=rgba)
+
     blender_texts.append(text)
     objects[-1]['text'] = {
       "body": text.data.body,
@@ -460,18 +479,17 @@ def add_random_objects(scene_struct, num_objects, args, camera):
       "char_bboxes": char_bboxes
     }
 
-
   # Check that all objects are at least partially visible in the rendered image
-  all_visible = check_visibility(blender_objects, args.min_pixels_per_object)
-  # if not all_visible:
-  #   # If any of the objects are fully occluded then start over; delete all
-  #   # objects from the scene and place them all again.
-  #   print('Some objects are occluded; replacing objects')
-  #   for obj in blender_objects:
-  #     utils.delete_object(obj)
-  #   for text in blender_texts:
-  #     utils.delete_object(text)
-  #   return add_random_objects(scene_struct, num_objects, args, camera)
+  all_objects_visible = check_visibility(blender_objects + all_chars, args.min_pixels_per_object)
+  if not all_objects_visible:
+    # If any of the objects are fully occluded then start over; delete all
+    # objects from the scene and place them all again.
+    print('Some objects are occluded; replacing objects')
+    for obj in blender_objects:
+      utils.delete_object(obj)
+    for text in blender_texts:
+      utils.delete_object(text)
+    return add_random_objects(scene_struct, num_objects, args, camera)
 
   return texts, blender_texts, objects, blender_objects
 
@@ -514,22 +532,43 @@ def check_visibility(blender_objects, min_pixels_per_object):
 
   Returns True if all objects are visible and False otherwise.
   """
-  f, path = tempfile.mkstemp(suffix='.png')
+  chars = []
+  obj_prims = []
+  for obj in blender_objects:
+    if "Mesh" in obj.data.name:
+      chars.append(obj)
+    else:
+      obj_prims.append(obj)
 
-  object_colors = render_shadeless(blender_objects, path=path)
+  f, path = tempfile.mkstemp(suffix='.png')
+  num_visible_obs = 0
+  object_colors, text_colors = render_shadeless(blender_objects, path=path)
   img = bpy.data.images.load(path)
   p = list(img.pixels)
-  color_count = Counter((p[i], p[i+1], p[i+2], p[i+3])
+  color_count = Counter((p[i], p[i+1], p[i+2])
                         for i in range(0, len(p), 4))
   os.remove(path)
-  if len(color_count) != len(blender_objects) + 1:
-    return False
-  for _, count in color_count.most_common():
-    # import pdb; pdb.set_trace()
-    if count < min_pixels_per_object:
-      return False
-  return True
+  char_visibility = {}
+  for color, count in color_count.most_common():
 
+    was_text, text_name = color_in_colors(color, text_colors)
+    if was_text:
+      print("FOUND!")
+      char_visibility[text_name] = count
+    else:
+      if count > min_pixels_per_object and not was_text:
+        num_visible_obs += 1
+  import pdb; pdb.set_trace()
+  if num_visible_obs == len(obj_prims) + 1:
+    return True, char_visibility
+  return False, char_visibility
+
+
+def color_in_colors(color, text_colors):
+  for tname, tc in text_colors.items():
+      if color == tc:
+        return True, tname
+  return False, tname
 
 def render_shadeless(blender_objects, path='flat.png'):
   """
@@ -558,7 +597,10 @@ def render_shadeless(blender_objects, path='flat.png'):
 
   # Add random shadeless materials to all objects
   object_colors = set()
+  text_colors = {}
   old_materials = []
+  planes = []
+
   for i, obj in enumerate(blender_objects):
     old_materials.append(obj.data.materials[0])
     bpy.ops.material.new()
@@ -566,15 +608,18 @@ def render_shadeless(blender_objects, path='flat.png'):
     mat.name = 'Material_%d' % i
     while True:
       r, g, b = [random.random() for _ in range(3)]
-      if (r, g, b) not in object_colors: break
-    object_colors.add((r, g, b))
+      if (r, g, b) not in object_colors and (r, g, b) not in text_colors.values(): break
+
+    if "Mesh" in obj.data.name:
+      text_colors[obj.data.name] = (r, g, b)
+    else:
+      object_colors.add((r, g, b))
     mat.diffuse_color = [r, g, b]
     mat.use_shadeless = True
     obj.data.materials[0] = mat
 
   # Render the scene
   bpy.ops.render.render(write_still=True)
-
   # Undo the above; first restore the materials to objects
   for mat, obj in zip(old_materials, blender_objects):
     obj.data.materials[0] = mat
@@ -590,7 +635,7 @@ def render_shadeless(blender_objects, path='flat.png'):
   render_args.engine = old_engine
   render_args.use_antialiasing = old_use_antialiasing
 
-  return object_colors
+  return object_colors, text_colors
 
 
 if __name__ == '__main__':
