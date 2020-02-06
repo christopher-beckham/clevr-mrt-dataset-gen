@@ -172,6 +172,15 @@ def makeInvisible(ob):
     # as there is no ob.children_recursive attribute
     makeInvisible(child)
 
+def load_font(text):
+  # load and set font
+  font_dir = "data/fonts"
+  font = random.choice(os.listdir(font_dir))
+  font_path = os.path.join(font_dir, font)
+  font = bpy.data.fonts.load(font_path)
+  text.data.font = font
+
+
 def add_text(body):
   # Take the current object and "increase the resolution"
   obj = bpy.context.active_object
@@ -188,12 +197,14 @@ def add_text(body):
   text.data.size = 0.5
   text.data.align_x = "CENTER"
 
-  # load and set font
-  font_dir = "data/fonts"
-  font = random.choice(os.listdir(font_dir))
-  font_path = os.path.join(font_dir, font)
-  font = bpy.data.fonts.load(font_path)
-  text.data.font = font
+  num_retries = 0
+  max_retries = 50
+  while num_retries < max_retries:
+    try:
+      load_font(text)
+      break
+    except Exception as e:
+      print(e)
 
   # tweak the size of the text
   if text.dimensions[0] > obj.dimensions[0]:
@@ -204,8 +215,8 @@ def add_text(body):
 
   # Increase text mesh resolution and rotate
   bpy.ops.object.modifier_add(type='SUBSURF')
-  bpy.context.active_object.modifiers['Subsurf'].levels = 2  # View
-  bpy.context.active_object.modifiers['Subsurf'].render_levels = 2  # Render
+  bpy.context.active_object.modifiers['Subsurf'].levels = 3  # View
+  bpy.context.active_object.modifiers['Subsurf'].render_levels = 3  # Render
   bpy.context.active_object.modifiers['Subsurf'].subdivision_type = "SIMPLE"
 
   bpy.ops.object.modifier_add(type='SHRINKWRAP')
@@ -219,6 +230,7 @@ def add_text(body):
   bpy.context.scene.update()
 
   # copy the existing text then break into characters
+  # import pdb; pdb.set_trace()
   bpy.ops.object.duplicate()
   bpy.ops.object.convert(target="MESH")
   bpy.ops.object.mode_set(mode='EDIT')
@@ -227,7 +239,7 @@ def add_text(body):
   bpy.ops.object.mode_set(mode='OBJECT')
   bpy.context.scene.update()
 
-  chars = bpy.context.selected_objects[:-1]
+  chars = bpy.context.selected_objects#[:-1]
   bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS', center='BOUNDS')
   bpy.context.scene.objects.active = text
   makeInvisible(text)
