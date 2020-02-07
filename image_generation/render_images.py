@@ -447,7 +447,7 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     # Add text to Blender
     try:
       char_bboxes, chars = utils.add_text(chars)
-
+      import pdb;pdb.set_trace()
       all_chars.extend(chars)
     except Exception as e:
       utils.delete_object(bpy.context.scene.objects.active)
@@ -480,7 +480,8 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     }
 
   # Check that all objects are at least partially visible in the rendered image
-  all_objects_visible = check_visibility(blender_objects + all_chars, args.min_pixels_per_object)
+  all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object)
+  import pdb; pdb.set_trace()
   if not all_objects_visible:
     # If any of the objects are fully occluded then start over; delete all
     # objects from the scene and place them all again.
@@ -490,7 +491,8 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     for text in blender_texts:
       utils.delete_object(text)
     return add_random_objects(scene_struct, num_objects, args, camera)
-
+  for char in all_chars:
+    char.data.name
   return texts, blender_texts, objects, blender_objects
 
 
@@ -532,36 +534,44 @@ def check_visibility(blender_objects, min_pixels_per_object):
 
   Returns True if all objects are visible and False otherwise.
   """
+
+  # Split up input objects into characters and objects
+  num_visible_obs = 0
   chars = []
-  obj_prims = []
+  objs = []
   for obj in blender_objects:
     if "Mesh" in obj.data.name:
       chars.append(obj)
     else:
-      obj_prims.append(obj)
+      objs.append(obj)
 
-  f, path = tempfile.mkstemp(suffix='.png')
-  num_visible_obs = 0
+  # render an image with different colors for each object and count the pixels (ignoring alpha)
+  f, path = tempfile.mkstemp(suffix='.exr')
   object_colors, text_colors = render_shadeless(blender_objects, path=path)
   img = bpy.data.images.load(path)
   p = list(img.pixels)
   color_count = Counter((p[i], p[i+1], p[i+2])
                         for i in range(0, len(p), 4))
   os.remove(path)
-  char_visibility = {}
-  for color, count in color_count.most_common():
 
+  # loop through the colors and match them to objects (and characters)
+  visible_chars = {}
+  i = 0
+  for color, count in color_count.most_common():
+    if i != 0:
+      color = (round(color[0], 2), round(color[1], 2), round(color[2], 2))
+    i += 1
     was_text, text_name = color_in_colors(color, text_colors)
+    was_obj = color_in_objcolors(color, object_colors)
+
     if was_text:
-      print("FOUND!")
-      char_visibility[text_name] = count
-    else:
-      if count > min_pixels_per_object and not was_text:
-        num_visible_obs += 1
-  import pdb; pdb.set_trace()
-  if num_visible_obs == len(obj_prims) + 1:
-    return True, char_visibility
-  return False, char_visibility
+      visible_chars[text_name] = count
+    if was_obj and count > min_pixels_per_object:
+      num_visible_obs += 1
+
+  if num_visible_obs == len(objs):
+    return True, visible_chars
+  return False, visible_chars
 
 
 def color_in_colors(color, text_colors):
@@ -569,6 +579,12 @@ def color_in_colors(color, text_colors):
       if color == tc:
         return True, tname
   return False, tname
+
+def color_in_objcolors(color, obj_colors):
+  for c in obj_colors:
+      if color == c:
+        return True
+  return False
 
 def render_shadeless(blender_objects, path='flat.png'):
   """
@@ -599,16 +615,13 @@ def render_shadeless(blender_objects, path='flat.png'):
   object_colors = set()
   text_colors = {}
   old_materials = []
-  planes = []
 
   for i, obj in enumerate(blender_objects):
     old_materials.append(obj.data.materials[0])
     bpy.ops.material.new()
     mat = bpy.data.materials['Material']
     mat.name = 'Material_%d' % i
-    while True:
-      r, g, b = [random.random() for _ in range(3)]
-      if (r, g, b) not in object_colors and (r, g, b) not in text_colors.values(): break
+    r, g, b = i * .01, i * .01, i * .01
 
     if "Mesh" in obj.data.name:
       text_colors[obj.data.name] = (r, g, b)
@@ -617,6 +630,11 @@ def render_shadeless(blender_objects, path='flat.png'):
     mat.diffuse_color = [r, g, b]
     mat.use_shadeless = True
     obj.data.materials[0] = mat
+
+  # Need to do this to not transform the colors too much during rendering
+  bpy.context.scene.render.image_settings.view_settings.view_transform = "Raw"
+  bpy.context.scene.render.image_settings.file_format = 'OPEN_EXR'
+  bpy.context.scene.render.image_settings.color_mode = 'RGB'
 
   # Render the scene
   bpy.ops.render.render(write_still=True)
