@@ -157,10 +157,10 @@ def add_text(body):
       print(e)
 
   # tweak the size of the text
-  if text.dimensions[0] > obj.dimensions[0]:
-    text.dimensions[0] = obj.dimensions[0] - 0.3
-  if text.dimensions[1] > obj.dimensions[1]:
-    text.dimensions[1] = obj.dimensions[1] - 0.1
+  # if text.dimensions[0] > obj.dimensions[0]:
+  #   text.dimensions[0] = obj.dimensions[0] - 0.3
+  # if text.dimensions[1] > obj.dimensions[1]:
+  #   text.dimensions[1] = obj.dimensions[1] - 0.1
   bpy.context.scene.update()
 
   # Increase text mesh resolution and rotate
@@ -214,8 +214,8 @@ def add_text(body):
 
 def id_chars(text, char_bboxes):
   # currently assumes script is written left to right
-  bbox_dict = {bbox['center'][1]:bbox for bbox in char_bboxes}
-  ltr = sorted([bbox['center'][1] for bbox in char_bboxes])
+  bbox_dict = {bbox['center'][0]:bbox for bbox in char_bboxes}
+  ltr = sorted([bbox['center'][0] for bbox in char_bboxes])
   for i, k in enumerate(ltr):
     bbox_dict[k]['char'] = text.data.body[i]
   return list(bbox_dict.values())

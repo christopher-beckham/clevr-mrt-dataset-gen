@@ -25,14 +25,13 @@ objects = scene['objects']
 for object in objects:
     text = object['text']
     body = text['body']
-    # img = cv2.rectangle(img, (10, 10), (10, 10), (0, 0, 255), 2)
     char_bboxes = text['char_bboxes']
-    # import pdb; pdb.set_trace()
     for bbox in char_bboxes:
-        char = bbox[0]
-        o_loc = bbox[1]
-        p1 = (int(bbox[2]), int(bbox[3]))
-        p2 = (int(bbox[4]), int(bbox[5]))
+        char = bbox['char']
+        o_loc = bbox['center']
+        bb = bbox['bbox']
+        p1 = (int(bb[0]), int(bb[1]))
+        p2 = (int(bb[2]), int(bb[3]))
 
         # import pdb; pdb.set_trace()
         w = (p2[0] - p1[0])
@@ -43,6 +42,8 @@ for object in objects:
         p2 = rotate(origin, p2, angle)
         print(p1)
         print(p2)
+        if bbox['visible_pixels'] < 0:
+            continue
         img = cv2.rectangle(img, p1, p2, (0, 255, 0), 1)
         img = cv2.circle(img, tuple(o_loc[0:2]), 2, (0, 0, 255), 1)
         cv2.putText(img, char, tuple(o_loc[0:2]), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0), 1)

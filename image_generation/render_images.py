@@ -390,11 +390,11 @@ def add_random_objects(scene_struct, num_objects, args, camera):
           direction_vec = scene_struct['directions'][direction_name]
           assert direction_vec[2] == 0
           margin = dx * direction_vec[0] + dy * direction_vec[1]
-          if 0 < margin < args.margin:
-            print(margin, args.margin, direction_name)
-            print('BROKEN MARGIN!')
-            margins_good = False
-            break
+          # if 0 < margin < args.margin:
+          #   print(margin, args.margin, direction_name)
+          #   print('BROKEN MARGIN!')
+          #   margins_good = False
+          #   break
         if not margins_good:
           break
 
@@ -470,7 +470,19 @@ def add_random_objects(scene_struct, num_objects, args, camera):
       utils.add_material(mat_name, Color=rgba)
 
     blender_texts.append(text)
+
+    # Check that all objects are at least partially visible in the rendered image
+    all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object)
+    for textid, visible_pixels in visible_chars.items():
+      for char_bbox in char_bboxes:
+        if char_bbox['id'] == textid:
+          char_bbox['visible_pixels'] = visible_pixels
+    for char_bbox in char_bboxes:
+      if not char_bbox.get("visible_pixels"):
+        char_bbox['visible_pixels'] = 0
+
     objects[-1]['text'] = {
+      "font": text.data.font.name,
       "body": text.data.body,
       "3d_coords": tuple(text.location),
       "pixel_coords": utils.get_camera_coords(camera, text.location),
@@ -478,15 +490,6 @@ def add_random_objects(scene_struct, num_objects, args, camera):
       "char_bboxes": char_bboxes
     }
 
-  # Check that all objects are at least partially visible in the rendered image
-  all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object)
-  for textid, visible_pixels in visible_chars.items():
-    for char_bbox in char_bboxes:
-      if char_bbox['id'] == textid:
-        char_bbox['visible_pixels'] = visible_pixels
-  for char_bbox in char_bboxes:
-    if not char_bbox.get("visible_pixels"):
-      char_bbox['visible_pixels'] = 0
 
   if not all_objects_visible:
     # If any of the objects are fully occluded then start over; delete all
