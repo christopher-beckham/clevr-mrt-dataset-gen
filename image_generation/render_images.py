@@ -447,7 +447,6 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     # Add text to Blender
     try:
       char_bboxes, chars = utils.add_text(chars)
-      import pdb;pdb.set_trace()
       all_chars.extend(chars)
     except Exception as e:
       utils.delete_object(bpy.context.scene.objects.active)
@@ -481,7 +480,14 @@ def add_random_objects(scene_struct, num_objects, args, camera):
 
   # Check that all objects are at least partially visible in the rendered image
   all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object)
-  import pdb; pdb.set_trace()
+  for textid, visible_pixels in visible_chars.items():
+    for char_bbox in char_bboxes:
+      if char_bbox['id'] == textid:
+        char_bbox['visible_pixels'] = visible_pixels
+  for char_bbox in char_bboxes:
+    if not char_bbox.get("visible_pixels"):
+      char_bbox['visible_pixels'] = 0
+
   if not all_objects_visible:
     # If any of the objects are fully occluded then start over; delete all
     # objects from the scene and place them all again.
@@ -491,8 +497,6 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     for text in blender_texts:
       utils.delete_object(text)
     return add_random_objects(scene_struct, num_objects, args, camera)
-  for char in all_chars:
-    char.data.name
   return texts, blender_texts, objects, blender_objects
 
 
@@ -638,6 +642,12 @@ def render_shadeless(blender_objects, path='flat.png'):
 
   # Render the scene
   bpy.ops.render.render(write_still=True)
+
+  # Change these settings back so we render out the PNG images
+  bpy.context.scene.render.image_settings.view_settings.view_transform = "Default"
+  bpy.context.scene.render.image_settings.file_format = 'PNG'
+  bpy.context.scene.render.image_settings.color_mode = 'RGBA'
+
   # Undo the above; first restore the materials to objects
   for mat, obj in zip(old_materials, blender_objects):
     obj.data.materials[0] = mat

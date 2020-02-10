@@ -107,64 +107,6 @@ def add_object(object_dir, name, scale, loc, theta=0):
   bpy.ops.transform.resize(value=(scale, scale, scale))
   bpy.ops.transform.translate(value=(x, y, scale))
 
-
-# def setup_dev():
-#   # Do this to ensure that we can access these files in blender
-#   # echo $PWD/image_generation >> /home/martin/blender-2.78c-linux-glibc219-x86_64/2.78/python/lib/python3.5/site-packages/clevr.pth
-#   #  ~/.local/bin/blender/blender
-#   # Imports
-#   bpy.ops.wm.open_mainfile(filepath="data/base_scene.blend")
-#   import utils
-#   import bmesh
-#   from mathutils import Vector
-#
-#   utils.load_materials("data/materials")
-#
-#   # add a cube
-#   #utils.add_object("data/shapes", "SmoothCube_v2", data.7, (data, data), theta=20.)
-#   utils.add_object("data/shapes", "SmoothCylinder", data.7, (data, data), theta=20.)
-#   cube = bpy.data.objects['SmoothCube_v2_0']
-#
-#   bpy.ops.object.mode_set(mode='OBJECT')
-#   cam_loc = bpy.data.objects["Camera"].location
-#   (hit, loc, norm, face_index) = cube.closest_point_on_mesh(cam_loc) # https://blender.stackexchange.com/questions/58409/how-do-i-find-the-closest-point-on-another-mesh-to-a-vertex-with-python
-#
-#
-#   bpy.ops.object.text_add(location=loc)
-#   text = bpy.data.objects['Text']
-#   text.data.body = "Hallo"
-#   text.data.extrude = data.03
-#   text.rotation_euler = (1.5, data, 1.data)
-#   m = text.new('My SubDiv', 'SUBSURF')
-#   m.levels = 1
-#   m.render_levels = 2
-#   m.subdivision_type = "SIMPLE"
-#
-#
-#   # shrink wrap the text to the object
-##
-#   # load fonts
-#
-#   # load text dataset (w/ entities?)
-#
-#   # randomize text sizes, styles and locations on the objects
-#
-#
-#
-#   # Excess crap
-#   # myFontCurve = bpy.data.curves.new(type="FONT", name="myFontCurve")
-#   # myFontOb = bpy.data.objects.new("myFontOb", myFontCurve)
-#   # myFontOb.data.body = "my text"
-#   # bpy.context.scene.objects.link(myFontOb)
-#   # bpy.context.scene.update()
-#   # vert_list = [cube.matrix_world * v.co for v in cube.data.vertices]
-#   # face_verts = [cube.matrix_world * v.co for v in bm.faces[data]]
-#
-#   # Ensure we are in edit mode and get a bmesh / bbox of the cube
-#   # bpy.ops.object.mode_set(mode='EDIT')
-#   # bpy.ops.mesh.normals_make_consistent(inside=False)
-#   # bm = bmesh.from_edit_mesh(cube.data)
-#   # bbox = [x[:] for x in cube.bound_box]
 def make_invisible(ob):
   for child in ob.children:
     child.hide = True
@@ -262,7 +204,7 @@ def add_text(body):
     top_left = get_camera_coords(camera, o.location - o.dimensions/2)
     bottom_right = get_camera_coords(camera, o.location + o.dimensions/2)
     o_loc = get_camera_coords(camera, o.location)
-    char_bboxes.append([o_loc, top_left[0], top_left[1], bottom_right[0], bottom_right[1]])
+    char_bboxes.append({"center": o_loc, "bbox": [top_left[0], top_left[1], bottom_right[0], bottom_right[1]], "id": o.data.name})
     make_invisible(o)
   char_bboxes = id_chars(text, char_bboxes)
   make_visible(text)
@@ -272,10 +214,10 @@ def add_text(body):
 
 def id_chars(text, char_bboxes):
   # currently assumes script is written left to right
-  bbox_dict = {bbox[1]:bbox for bbox in char_bboxes}
-  ltr = sorted([bbox[1] for bbox in char_bboxes])
+  bbox_dict = {bbox['center'][1]:bbox for bbox in char_bboxes}
+  ltr = sorted([bbox['center'][1] for bbox in char_bboxes])
   for i, k in enumerate(ltr):
-    bbox_dict[k].insert(0, text.data.body[i])
+    bbox_dict[k]['char'] = text.data.body[i]
   return list(bbox_dict.values())
 
 def load_materials(material_dir):
