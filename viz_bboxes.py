@@ -42,7 +42,8 @@ for object in objects:
         p2 = rotate(origin, p2, angle)
         print(p1)
         print(p2)
-        if bbox['visible_pixels'] < 0:
+
+        if bbox['visible_pixels'] < 40:
             continue
         img = cv2.rectangle(img, p1, p2, (0, 255, 0), 1)
         img = cv2.circle(img, tuple(o_loc[0:2]), 2, (0, 0, 255), 1)

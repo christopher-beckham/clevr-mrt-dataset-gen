@@ -358,7 +358,7 @@ def add_random_objects(scene_struct, num_objects, args, camera):
   all_chars = []
   for i in range(num_objects):
     # Choose a random size
-    size_name, r = random.choice(size_mapping)
+    size_name, r = ('large', 0.7)#random.choice(size_mapping)
 
     # Try to place the object, ensuring that we don't intersect any existing
     # objects and that we are more than the desired margin away from all existing
@@ -491,15 +491,15 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     }
 
 
-  if not all_objects_visible:
-    # If any of the objects are fully occluded then start over; delete all
-    # objects from the scene and place them all again.
-    print('Some objects are occluded; replacing objects')
-    for obj in blender_objects:
-      utils.delete_object(obj)
-    for text in blender_texts:
-      utils.delete_object(text)
-    return add_random_objects(scene_struct, num_objects, args, camera)
+  # if not all_objects_visible:
+  #   # If any of the objects are fully occluded then start over; delete all
+  #   # objects from the scene and place them all again.
+  #   print('Some objects are occluded; replacing objects')
+  #   for obj in blender_objects:
+  #     utils.delete_object(obj)
+  #   for text in blender_texts:
+  #     utils.delete_object(text)
+  #   return add_random_objects(scene_struct, num_objects, args, camera)
   return texts, blender_texts, objects, blender_objects
 
 

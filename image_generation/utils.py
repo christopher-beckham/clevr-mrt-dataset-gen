@@ -148,13 +148,13 @@ def add_text(body):
 
   num_retries = 0
   max_retries = 50
-  while num_retries < max_retries:
-    try:
-      load_font(text)
-      break
-    except Exception as e:
-      num_retries += 1
-      print(e)
+  # while num_retries < max_retries:
+  #   try:
+  #     load_font(text)
+  #     break
+  #   except Exception as e:
+  #     num_retries += 1
+  #     print(e)
 
   # tweak the size of the text
   # if text.dimensions[0] > obj.dimensions[0]:
@@ -174,7 +174,12 @@ def add_text(body):
   bpy.context.active_object.modifiers['Shrinkwrap'].offset = 0.01
   bpy.context.active_object.modifiers['Shrinkwrap'].wrap_method = "PROJECT"
   bpy.context.active_object.modifiers['Shrinkwrap'].use_project_z = True
-  text.rotation_euler = (1.5, 0, 1.0)
+  bpy.context.active_object.modifiers['Shrinkwrap'].use_project_x = True
+  bpy.context.active_object.modifiers['Shrinkwrap'].use_positive_direction = True
+  bpy.context.active_object.modifiers['Shrinkwrap'].use_negative_direction = False
+  import math
+  rot = random.random() * math.pi
+  text.rotation_euler = (1.5, 0, rot)
 
   # split text into characters
   bpy.context.scene.update()
