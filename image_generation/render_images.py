@@ -82,6 +82,13 @@ parser.add_argument('--max_retries', default=50, type=int,
     help="The number of times to try placing an object before giving up and " +
          "re-placing all objects in the scene.")
 
+# Settings for text
+parser.add_argument('--random_text_rotation', action='store_true',
+    help="Determines whether the text will be rotated around the object")
+parser.add_argument('--all_chars_visible', action='store_true',
+    help="Determines whether we require that all text characters are visible from one view")
+
+
 # Output settings
 parser.add_argument('--start_idx', default=0, type=int,
     help="The index at which to start for numbering rendered images. Setting " +
@@ -356,6 +363,7 @@ def add_random_objects(scene_struct, num_objects, args, camera):
   texts = []
   blender_texts = []
   all_chars = []
+  all_char_bboxes = []
   for i in range(num_objects):
     # Choose a random size
     size_name, r = ('large', 0.7)#random.choice(size_mapping)
@@ -390,11 +398,11 @@ def add_random_objects(scene_struct, num_objects, args, camera):
           direction_vec = scene_struct['directions'][direction_name]
           assert direction_vec[2] == 0
           margin = dx * direction_vec[0] + dy * direction_vec[1]
-          # if 0 < margin < args.margin:
-          #   print(margin, args.margin, direction_name)
-          #   print('BROKEN MARGIN!')
-          #   margins_good = False
-          #   break
+          if 0 < margin < args.margin:
+            print(margin, args.margin, direction_name)
+            print('BROKEN MARGIN!')
+            margins_good = False
+            break
         if not margins_good:
           break
 
@@ -446,18 +454,10 @@ def add_random_objects(scene_struct, num_objects, args, camera):
 
     # Add text to Blender
     try:
-      char_bboxes, chars = utils.add_text(chars)
+      char_bboxes, chars = utils.add_text(chars, random_rotation=args.random_text_rotation)
       all_chars.extend(chars)
     except Exception as e:
-      utils.delete_object(bpy.context.scene.objects.active)
-      for obj in blender_objects:
-        utils.delete_object(obj)
-      for text in blender_texts:
-        utils.delete_object(text)
-      for obj in bpy.context.scene.objects:
-        if "Text" in obj.name:
-          utils.delete_object(obj)
-      return add_random_objects(scene_struct, num_objects, args, camera)
+      return purge(blender_objects, blender_texts, scene_struct, num_objects, args, camera)
 
     # Select material and color for text
     text = bpy.context.scene.objects.active
@@ -480,6 +480,8 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     for char_bbox in char_bboxes:
       if not char_bbox.get("visible_pixels"):
         char_bbox['visible_pixels'] = 0
+      all_char_bboxes.append(char_bbox)
+    all_chars_visible = [c['visible_pixels'] > 50 for c in all_char_bboxes]
 
     objects[-1]['text'] = {
       "font": text.data.font.name,
@@ -491,16 +493,25 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     }
 
 
-  # if not all_objects_visible:
-  #   # If any of the objects are fully occluded then start over; delete all
-  #   # objects from the scene and place them all again.
-  #   print('Some objects are occluded; replacing objects')
-  #   for obj in blender_objects:
-  #     utils.delete_object(obj)
-  #   for text in blender_texts:
-  #     utils.delete_object(text)
-  #   return add_random_objects(scene_struct, num_objects, args, camera)
+  if not all_objects_visible:
+    return purge(blender_objects, blender_texts, scene_struct, num_objects, args, camera)
+  if args.all_chars_visible and not all(all_chars_visible):
+    return purge(blender_objects, blender_texts, scene_struct, num_objects, args, camera)
+
   return texts, blender_texts, objects, blender_objects
+
+def purge(blender_objects, blender_texts, scene_struct, num_objects, args, camera):
+  # If any of the objects are fully occluded then start over; delete all
+  # objects from the scene and place them all again.
+  print('Some objects are occluded; replacing objects')
+  for obj in blender_objects:
+    utils.delete_object(obj)
+  for text in blender_texts:
+    utils.delete_object(text)
+  for obj in bpy.context.scene.objects:
+    if "Text" in obj.name:
+      utils.delete_object(obj)
+  return add_random_objects(scene_struct, num_objects, args, camera)
 
 
 def compute_all_relationships(scene_struct, eps=0.2):

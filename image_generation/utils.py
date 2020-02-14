@@ -5,10 +5,11 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import sys, random, os
+import sys, random, os, math
 import bpy, bpy_extras
 import numpy as np
 from mathutils import Vector
+import collections
 from bpy_extras.object_utils import world_to_camera_view
 """
 Some utility functions for interacting with Blender
@@ -41,6 +42,38 @@ def delete_object(obj):
     o.select = False
   obj.select = True
   bpy.ops.object.delete()
+
+
+def bounds(cam, obj, local=False):
+
+  local_coords = obj.bound_box[:]
+  om = obj.matrix_world
+
+  if not local:
+    worldify = lambda p: om * Vector(p[:])
+    coords = [worldify(p).to_tuple() for p in local_coords]
+  else:
+    coords = [p[:] for p in local_coords]
+  cam_coords = []
+
+  for coord in coords:
+    cam_coords.append(get_camera_coords(cam, Vector(coord)))
+
+  return cam_coords
+  # rotated = zip(*coords[::-1])
+  #
+  # push_axis = []
+  # for (axis, _list) in zip('xyz', rotated):
+  #   info = lambda: None
+  #   info.max = max(_list)
+  #   info.min = min(_list)
+  #   info.distance = info.max - info.min
+  #   push_axis.append(info)
+  #
+  # originals = dict(zip(['x', 'y', 'z'], push_axis))
+  #
+  # o_details = collections.namedtuple('object_details', 'x y z')
+  # return o_details(**originals)
 
 
 def get_camera_coords(cam, pos):
@@ -130,7 +163,7 @@ def load_font(text):
   text.data.font = font
 
 
-def add_text(body):
+def add_text(body, random_rotation):
   # Take the current object and "increase the resolution"
   obj = bpy.context.active_object
   bpy.ops.object.modifier_add(type='SUBSURF')
@@ -145,22 +178,6 @@ def add_text(body):
   text.data.extrude = 0.0
   text.data.size = 0.5
   text.data.align_x = "CENTER"
-
-  num_retries = 0
-  max_retries = 50
-  # while num_retries < max_retries:
-  #   try:
-  #     load_font(text)
-  #     break
-  #   except Exception as e:
-  #     num_retries += 1
-  #     print(e)
-
-  # tweak the size of the text
-  # if text.dimensions[0] > obj.dimensions[0]:
-  #   text.dimensions[0] = obj.dimensions[0] - 0.3
-  # if text.dimensions[1] > obj.dimensions[1]:
-  #   text.dimensions[1] = obj.dimensions[1] - 0.1
   bpy.context.scene.update()
 
   # Increase text mesh resolution and rotate
@@ -177,9 +194,11 @@ def add_text(body):
   bpy.context.active_object.modifiers['Shrinkwrap'].use_project_x = True
   bpy.context.active_object.modifiers['Shrinkwrap'].use_positive_direction = True
   bpy.context.active_object.modifiers['Shrinkwrap'].use_negative_direction = False
-  import math
-  rot = random.random() * math.pi
-  text.rotation_euler = (1.5, 0, rot)
+  if random_rotation:
+    rot = random.random() * math.pi
+    text.rotation_euler = (1.5, 0, rot)
+  else:
+    text.rotation_euler = (1.5, 0, -0.5)
 
   # split text into characters
   bpy.context.scene.update()
@@ -206,10 +225,9 @@ def add_text(body):
   for i, o in enumerate(chars):
     scene = bpy.context.scene
     camera = scene.camera
-    top_left = get_camera_coords(camera, o.location - o.dimensions/2)
-    bottom_right = get_camera_coords(camera, o.location + o.dimensions/2)
+    bbox_coords = bounds(camera, o)
     o_loc = get_camera_coords(camera, o.location)
-    char_bboxes.append({"center": o_loc, "bbox": [top_left[0], top_left[1], bottom_right[0], bottom_right[1]], "id": o.data.name})
+    char_bboxes.append({"center": o_loc, "bbox": bbox_coords, "id": o.data.name})
     make_invisible(o)
   char_bboxes = id_chars(text, char_bboxes)
   make_visible(text)

@@ -2,6 +2,7 @@ import os
 import json
 import cv2
 import math
+import numpy as np
 
 def rotate(origin, point, angle):
     """
@@ -29,23 +30,23 @@ for object in objects:
     for bbox in char_bboxes:
         char = bbox['char']
         o_loc = bbox['center']
-        bb = bbox['bbox']
-        p1 = (int(bb[0]), int(bb[1]))
-        p2 = (int(bb[2]), int(bb[3]))
+        bb = [[int(x), int(y)] for x, y, z in bbox['bbox']]
 
-        # import pdb; pdb.set_trace()
-        w = (p2[0] - p1[0])
-        h = (p2[1] - p1[1])
-        origin = (p1[0] + w/2, p1[1] + h/2)
-        angle = math.pi / 2
-        p1 = rotate(origin, p1, angle)
-        p2 = rotate(origin, p2, angle)
-        print(p1)
-        print(p2)
+        # this basically takes the max and min for "normal" left/right top/bottom characters
+        bb2 = np.array([[min([bb[0][0], bb[1][0]]), max([bb[0][1], bb[1][1]])],
+                        [min([bb[2][0], bb[3][0]]), max([bb[2][1], bb[3][1]])],
+                        [max([bb[6][0], bb[7][0]]), max([bb[6][1], bb[7][1]])],
+                        [max([bb[4][0], bb[5][0]]), min([bb[4][1], bb[5][1]])]])
+        print(char + ": num pixels: " + str(bbox['visible_pixels']))
+        # if bbox['visible_pixels'] < 50:
+        #     continue
 
-        if bbox['visible_pixels'] < 40:
-            continue
-        img = cv2.rectangle(img, p1, p2, (0, 255, 0), 1)
+        img = cv2.polylines(img, [bb2], True, (0, 255, 0), 1)
+
+        # use for tweaking bbox locations
+        # img = cv2.circle(img, tuple(bb[4]), 2, (0, 0, 255), 1)
+        # img = cv2.circle(img, tuple(bb[5]), 2, (0, 0, 255), 1)
+
         img = cv2.circle(img, tuple(o_loc[0:2]), 2, (0, 0, 255), 1)
         cv2.putText(img, char, tuple(o_loc[0:2]), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0), 1)
 
