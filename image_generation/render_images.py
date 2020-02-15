@@ -87,7 +87,8 @@ parser.add_argument('--random_text_rotation', action='store_true',
     help="Determines whether the text will be rotated around the object")
 parser.add_argument('--all_chars_visible', action='store_true',
     help="Determines whether we require that all text characters are visible from one view")
-
+parser.add_argument('--multi_view', action='store_true', help="should we write out multiple views")
+parser.add_argument('--enforce_obj_visibility', action='store_true', help="should all objects be visible from canonical view?")
 
 # Output settings
 parser.add_argument('--start_idx', default=0, type=int,
@@ -281,7 +282,7 @@ def render_scene(args,
 
   # Figure out the left, up, and behind directions along the plane and record
   # them in the scene structure
-  camera = bpy.data.objects['Camera']
+  camera = bpy.data.objects['Camera_canonical']
   #Quaternion((data.781359076499939, data.46651220321655273, data.2125076949596405, data.3559281527996063))
   plane_normal = plane.data.vertices[0].normal
   cam_behind = camera.matrix_world.to_quaternion() * Vector((0, 0, -1))
@@ -290,7 +291,6 @@ def render_scene(args,
   plane_behind = (cam_behind - cam_behind.project(plane_normal)).normalized()
   plane_left = (cam_left - cam_left.project(plane_normal)).normalized()
   plane_up = cam_up.project(plane_normal).normalized()
-  # camera.location[2] = data.2 # if you want to lower the camera
 
   # Delete the plane; we only used it for normals anyway. The base scene file
   # contains the actual ground plane.
@@ -316,7 +316,8 @@ def render_scene(args,
       bpy.data.objects['Lamp_Fill'].location[i] += rand(args.fill_light_jitter)
 
   # Now make some random objects
-  texts, blender_texts, objects, blender_objects = add_random_objects(scene_struct, num_objects, args, camera)
+  cams = [obj for obj in bpy.data.objects if obj.type == 'CAMERA']
+  texts, blender_texts, objects, blender_objects = add_random_objects(scene_struct, num_objects, args, cams)
 
   # Render the scene and dump the scene data structure
   scene_struct['objects'] = objects
@@ -324,7 +325,14 @@ def render_scene(args,
   scene_struct['relationships'] = compute_all_relationships(scene_struct)
   while True:
     try:
-      bpy.ops.render.render(write_still=True)
+      path_dir = bpy.context.scene.render.filepath  # save for restore
+      for cam in [obj for obj in bpy.data.objects if obj.type == 'CAMERA']:
+        bpy.context.scene.camera = cam
+        bpy.context.scene.render.filepath = ".".join(path_dir.split(".")[:-1]) + "_" + cam.name + ".png"
+        print(bpy.context.scene.render.filepath)
+        bpy.ops.render.render(write_still=True)
+        bpy.context.scene.render.filepath = path_dir
+      # bpy.ops.render.render(write_still=True)
       break
     except Exception as e:
       print(e)
@@ -336,7 +344,7 @@ def render_scene(args,
     bpy.ops.wm.save_as_mainfile(filepath=output_blendfile)
 
 
-def add_random_objects(scene_struct, num_objects, args, camera):
+def add_random_objects(scene_struct, num_objects, args, cams):
   """
   Add random objects to the current blender scene
   """
@@ -437,7 +445,7 @@ def add_random_objects(scene_struct, num_objects, args, camera):
     utils.add_material(mat_name, Color=rgba)
 
     # Record data about the object in the scene data structure
-    pixel_coords = utils.get_camera_coords(camera, obj.location)
+    pixel_coords = utils.get_camera_coords(cams[0], obj.location)
     objects.append({
       'shape': obj_name_out,
       'size': size_name,
@@ -457,7 +465,7 @@ def add_random_objects(scene_struct, num_objects, args, camera):
       char_bboxes, chars = utils.add_text(chars, random_rotation=args.random_text_rotation)
       all_chars.extend(chars)
     except Exception as e:
-      return purge(blender_objects, blender_texts, scene_struct, num_objects, args, camera)
+      return purge(blender_objects, blender_texts, scene_struct, num_objects, args, cams)
 
     # Select material and color for text
     text = bpy.context.scene.objects.active
@@ -487,16 +495,16 @@ def add_random_objects(scene_struct, num_objects, args, camera):
       "font": text.data.font.name,
       "body": text.data.body,
       "3d_coords": tuple(text.location),
-      "pixel_coords": utils.get_camera_coords(camera, text.location),
+      "pixel_coords": utils.get_camera_coords(cams[0], text.location),
       "color": color_name,
       "char_bboxes": char_bboxes
     }
 
 
-  if not all_objects_visible:
-    return purge(blender_objects, blender_texts, scene_struct, num_objects, args, camera)
+  if args.enforce_obj_visibility and not all_objects_visible:
+    return purge(blender_objects, blender_texts, scene_struct, num_objects, args, cams)
   if args.all_chars_visible and not all(all_chars_visible):
-    return purge(blender_objects, blender_texts, scene_struct, num_objects, args, camera)
+    return purge(blender_objects, blender_texts, scene_struct, num_objects, args, cams)
 
   return texts, blender_texts, objects, blender_objects
 

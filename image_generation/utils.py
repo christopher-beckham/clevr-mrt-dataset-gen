@@ -196,11 +196,10 @@ def add_text(body, random_rotation):
   bpy.context.active_object.modifiers['Shrinkwrap'].use_negative_direction = False
   if random_rotation:
     rot = random.random() * math.pi
-    text.rotation_euler = (1.5, 0, rot)
   else:
-    text.rotation_euler = (1.5, 0, -0.5)
+    rot = random.random() * -0.5
 
-  # split text into characters
+  text.rotation_euler = (1.5, 0, rot)
   bpy.context.scene.update()
 
   # copy the existing text then break into characters
@@ -223,10 +222,8 @@ def add_text(body, random_rotation):
 
   char_bboxes = []
   for i, o in enumerate(chars):
-    scene = bpy.context.scene
-    camera = scene.camera
-    bbox_coords = bounds(camera, o)
-    o_loc = get_camera_coords(camera, o.location)
+    bbox_coords = bounds(bpy.context.scene.camera, o)
+    o_loc = get_camera_coords(bpy.context.scene.camera, o.location)
     char_bboxes.append({"center": o_loc, "bbox": bbox_coords, "id": o.data.name})
     make_invisible(o)
   char_bboxes = id_chars(text, char_bboxes)
