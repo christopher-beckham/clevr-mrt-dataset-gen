@@ -1,5 +1,5 @@
 [{
-	"text": ["What text is on the <Z> <C> <M> <S>?", "What is the first word on the <Z> <C> <M> <S>?"],
+	"text": ["Does the text on the <Z> <C> <M> <S> say <T>?"],
 	"nodes": [{
 		"inputs": [],
 		"type": "scene"
@@ -24,6 +24,9 @@
 	}, {
 		"type": "Shape",
 		"name": "<S>"
+	}, {
+		"type": "Text",
+		"name": "<T>"
 	}],
 	"constraints": []
 }]

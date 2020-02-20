@@ -22,81 +22,81 @@ in a JSON metadata file.
 # value from this node.
 
 
-def scene_handler(scene_struct, inputs, side_inputs):
+def scene_handler(view_struct, inputs, side_inputs):
   # Just return all objects in the scene
-  return list(range(len(scene_struct['objects'])))
+  return list(range(len(view_struct['objects'])))
 
 
 def make_filter_handler(attribute):
-  def filter_handler(scene_struct, inputs, side_inputs):
+  def filter_handler(view_struct, inputs, side_inputs):
     assert len(inputs) == 1
     assert len(side_inputs) == 1
     value = side_inputs[0]
     output = []
     for idx in inputs[0]:
-      atr = scene_struct['objects'][idx][attribute]
+      atr = view_struct['objects'][idx][attribute]
       if value == atr or value in atr:
         output.append(idx)
     return output
   return filter_handler
 
 
-def unique_handler(scene_struct, inputs, side_inputs):
+def unique_handler(view_struct, inputs, side_inputs):
   assert len(inputs) == 1
   if len(inputs[0]) != 1:
     return '__INVALID__'
   return inputs[0][0]
 
 
-def vg_relate_handler(scene_struct, inputs, side_inputs):
+def vg_relate_handler(view_struct, inputs, side_inputs):
   assert len(inputs) == 1
   assert len(side_inputs) == 1
   output = set()
-  for rel in scene_struct['relationships']:
+  for rel in view_struct['relationships']:
     if rel['predicate'] == side_inputs[0] and rel['subject_idx'] == inputs[0]:
       output.add(rel['object_idx'])
   return sorted(list(output))
 
 
 
-def relate_handler(scene_struct, inputs, side_inputs):
+def relate_handler(view_struct, inputs, side_inputs):
   assert len(inputs) == 1
   assert len(side_inputs) == 1
   relation = side_inputs[0]
-  return scene_struct['relationships'][relation][inputs[0]]
+  return view_struct['relationships'][relation][inputs[0]]
     
 
-def union_handler(scene_struct, inputs, side_inputs):
+def union_handler(view_struct, inputs, side_inputs):
   assert len(inputs) == 2
   assert len(side_inputs) == 0
   return sorted(list(set(inputs[0]) | set(inputs[1])))
 
 
-def intersect_handler(scene_struct, inputs, side_inputs):
+def intersect_handler(view_struct, inputs, side_inputs):
   assert len(inputs) == 2
   assert len(side_inputs) == 0
   return sorted(list(set(inputs[0]) & set(inputs[1])))
 
 
-def count_handler(scene_struct, inputs, side_inputs):
+def count_handler(view_struct, inputs, side_inputs):
   assert len(inputs) == 1
   return len(inputs[0])
 
 
 def make_same_attr_handler(attribute):
-  def same_attr_handler(scene_struct, inputs, side_inputs):
+  def same_attr_handler(view_struct, inputs, side_inputs):
     cache_key = '_same_%s' % attribute
-    if cache_key not in scene_struct:
+    if cache_key not in view_struct:
       cache = {}
-      for i, obj1 in enumerate(scene_struct['objects']):
+      for i, obj1 in enumerate(view_struct['objects']):
         same = []
-        for j, obj2 in enumerate(scene_struct['objects']):
+        for j, obj2 in enumerate(view_struct['objects']):
           if i != j and obj1[attribute] == obj2[attribute]:
             same.append(j)
         cache[i] = same
-      scene_struct[cache_key] = cache
+      view_struct[cache_key] = cache
 
-    cache = scene_struct[cache_key]
+    cache = view_struct[cache_key]
     assert len(inputs) == 1
     assert len(side_inputs) == 0
     return cache[inputs[0]]
@@ -104,11 +104,11 @@ def make_same_attr_handler(attribute):
 
 
 def make_query_handler(attribute):
-  def query_handler(scene_struct, inputs, side_inputs):
+  def query_handler(view_struct, inputs, side_inputs):
     assert len(inputs) == 1
     assert len(side_inputs) == 0
     idx = inputs[0]
-    obj = scene_struct['objects'][idx]
+    obj = view_struct['objects'][idx]
     assert attribute in obj
     val = obj[attribute]
     if type(val) == list and len(val) != 1:
@@ -122,25 +122,25 @@ def make_query_handler(attribute):
   return query_handler
 
 
-def exist_handler(scene_struct, inputs, side_inputs):
+def exist_handler(view_struct, inputs, side_inputs):
   assert len(inputs) == 1
   assert len(side_inputs) == 0
   return len(inputs[0]) > 0
 
 
-def equal_handler(scene_struct, inputs, side_inputs):
+def equal_handler(view_struct, inputs, side_inputs):
   assert len(inputs) == 2
   assert len(side_inputs) == 0
   return inputs[0] == inputs[1]
 
 
-def less_than_handler(scene_struct, inputs, side_inputs):
+def less_than_handler(view_struct, inputs, side_inputs):
   assert len(inputs) == 2
   assert len(side_inputs) == 0
   return inputs[0] < inputs[1]
 
 
-def greater_than_handler(scene_struct, inputs, side_inputs):
+def greater_than_handler(view_struct, inputs, side_inputs):
   assert len(inputs) == 2
   assert len(side_inputs) == 0
   return inputs[0] > inputs[1]
@@ -184,7 +184,7 @@ execute_handlers = {
 }
 
 
-def answer_question(question, metadata, scene_struct, all_outputs=False,
+def answer_question(question, metadata, view_struct, all_outputs=False,
                     cache_outputs=True):
   """
   Use structured scene information to answer a structured question. Most of the
@@ -208,7 +208,7 @@ def answer_question(question, metadata, scene_struct, all_outputs=False,
       handler = execute_handlers[node_type]
       node_inputs = [node_outputs[idx] for idx in node['inputs']]
       side_inputs = node.get('side_inputs', [])
-      node_output = handler(scene_struct, node_inputs, side_inputs)
+      node_output = handler(view_struct, node_inputs, side_inputs)
       if cache_outputs:
         node['_output'] = node_output
     node_outputs.append(node_output)
@@ -264,20 +264,20 @@ def insert_scene_node(nodes, idx):
   return new_nodes_trimmed
 
 
-def is_degenerate(question, metadata, scene_struct, answer=None, verbose=False):
+def is_degenerate(question, metadata, view_struct, answer=None, verbose=False):
   """
   A question is degenerate if replacing any of its relate nodes with a scene
   node results in a question with the same answer.
   """
   if answer is None:
-    answer = answer_question(question, metadata, scene_struct)
+    answer = answer_question(question, metadata, view_struct)
 
   for idx, node in enumerate(question['nodes']):
     if node['type'] == 'relate':
       new_question = {
         'nodes': insert_scene_node(question['nodes'], idx)
       }
-      new_answer = answer_question(new_question, metadata, scene_struct)
+      new_answer = answer_question(new_question, metadata, view_struct)
       if verbose:
         print('here is truncated question:')
         for i, n in enumerate(new_question['nodes']):

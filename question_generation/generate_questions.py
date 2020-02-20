@@ -6,7 +6,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from __future__ import print_function
-import argparse, json, os, itertools, random, shutil
+import argparse, json, os, itertools, random, shutil, string
 import time
 import re
 from collections import defaultdict
@@ -91,12 +91,13 @@ parser.add_argument('--profile', action='store_true',
 # args = parser.parse_args()
 
 
-def precompute_filter_options(scene_struct, metadata):
+def precompute_filter_options(view_struct, metadata):
   # Keys are tuples (size, color, shape, material) (where some may be None)
   # and values are lists of object idxs that match the filter criterion
   attribute_map = {}
-
-  if metadata['dataset'] == 'CLEVR-v1.data':
+  if metadata['dataset'] == 'CLEVR-v1.0':
+    attr_keys = ['size', 'color', 'material', 'shape']
+  elif metadata['dataset'] == "CLEVR_TEXT":
     attr_keys = ['size', 'color', 'material', 'shape']
   else:
     assert False, 'Unrecognized dataset'
@@ -108,9 +109,8 @@ def precompute_filter_options(scene_struct, metadata):
     for j in range(len(attr_keys)):
       mask.append((i // (2 ** j)) % 2)
     masks.append(mask)
-
-  for object_idx, obj in enumerate(scene_struct['objects']):
-    if metadata['dataset'] == 'CLEVR-v1.data':
+  for object_idx, obj in enumerate(view_struct['objects']):
+    if metadata['dataset'] == 'CLEVR-v1.0':
       keys = [tuple(obj[k] for k in attr_keys)]
 
     for mask in masks:
@@ -126,19 +126,19 @@ def precompute_filter_options(scene_struct, metadata):
           attribute_map[masked_key] = set()
         attribute_map[masked_key].add(object_idx)
 
-  scene_struct['_filter_options'] = attribute_map
+  view_struct['_filter_options'] = attribute_map
 
 
-def find_filter_options(object_idxs, scene_struct, metadata):
+def find_filter_options(object_idxs, view_struct, metadata):
   # Keys are tuples (size, color, shape, material) (where some may be None)
   # and values are lists of object idxs that match the filter criterion
 
-  if '_filter_options' not in scene_struct:
-    precompute_filter_options(scene_struct, metadata)
+  if '_filter_options' not in view_struct:
+    precompute_filter_options(view_struct, metadata)
 
   attribute_map = {}
   object_idxs = set(object_idxs)
-  for k, vs in scene_struct['_filter_options'].items():
+  for k, vs in view_struct['_filter_options'].items():
     attribute_map[k] = sorted(list(object_idxs & vs))
   return attribute_map
 
@@ -162,19 +162,19 @@ def add_empty_filter_options(attribute_map, metadata, num_to_add):
       attribute_map[k] = []
 
 
-def find_relate_filter_options(object_idx, scene_struct, metadata,
+def find_relate_filter_options(object_idx, view_struct, metadata,
     unique=False, include_zero=False, trivial_frac=0.1):
   options = {}
-  if '_filter_options' not in scene_struct:
-    precompute_filter_options(scene_struct, metadata)
+  if '_filter_options' not in view_struct:
+    precompute_filter_options(view_struct, metadata)
 
   # TODO: Right now this is only looking for nontrivial combinations; in some
   # cases I may want to add trivial combinations, either where the intersection
   # is empty or where the intersection is equal to the filtering output.
   trivial_options = {}
-  for relationship in scene_struct['relationships']:
-    related = set(scene_struct['relationships'][relationship][object_idx])
-    for filters, filtered in scene_struct['_filter_options'].items():
+  for relationship in view_struct['relationships']:
+    related = set(view_struct['relationships'][relationship][object_idx])
+    for filters, filtered in view_struct['_filter_options'].items():
       intersection = related & filtered
       trivial = (intersection == filtered)
       if unique and len(intersection) != 1: continue
@@ -239,7 +239,7 @@ def other_heuristic(text, param_vals):
   return text
 
 
-def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
+def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
                               synonyms, max_instances=None, verbose=False):
 
   param_name_to_type = {p['name']: p['type'] for p in template['params']}
@@ -254,11 +254,10 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
   final_states = []
   while states:
     state = states.pop()
-
     # Check to make sure the current state is valid
     q = {'nodes': state['nodes']}
 
-    outputs = qeng.answer_question(q, metadata, scene_struct, all_outputs=True)
+    outputs = qeng.answer_question(q, metadata, view_struct, all_outputs=True)
     answer = outputs[-1]
     if answer == '__INVALID__': continue
 
@@ -313,7 +312,6 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
     if state['next_template_node'] == len(template['nodes']):
       # Use our rejection sampling heuristics to decide whether we should
       # keep this template instantiation
-      import pdb; pdb.set_trace()
       cur_answer_count = answer_counts[answer]
       answer_counts_sorted = sorted(answer_counts.values())
       median_count = answer_counts_sorted[len(answer_counts_sorted) // 2]
@@ -331,7 +329,7 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
       # degeneracy at the end
       has_relate = any(n['type'] == 'relate' for n in template['nodes'])
       if has_relate:
-        degen = qeng.is_degenerate(q, metadata, scene_struct, answer=answer,
+        degen = qeng.is_degenerate(q, metadata, view_struct, answer=answer,
                                    verbose=verbose)
         if degen:
           continue
@@ -358,10 +356,10 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
         unique = (next_node['type'] == 'relate_filter_unique')
         include_zero = (next_node['type'] == 'relate_filter_count'
                         or next_node['type'] == 'relate_filter_exist')
-        filter_options = find_relate_filter_options(answer, scene_struct, metadata,
+        filter_options = find_relate_filter_options(answer, view_struct, metadata,
                             unique=unique, include_zero=include_zero)
       else:
-        filter_options = find_filter_options(answer, scene_struct, metadata)
+        filter_options = find_filter_options(answer, view_struct, metadata)
         if next_node['type'] == 'filter':
           # Remove null filter
           filter_options.pop((None, None, None, None), None)
@@ -381,9 +379,11 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
 
       filter_option_keys = list(filter_options.keys())
       random.shuffle(filter_option_keys)
+      import pdb; pdb.set_trace()
       for k in filter_option_keys:
         new_nodes = []
         cur_next_vals = {k: v for k, v in state['vals'].items()}
+
         next_input = state['input_map'][next_node['inputs'][0]]
         filter_side_inputs = next_node['side_inputs']
         if next_node['type'].startswith('relate'):
@@ -439,9 +439,6 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
         })
 
     elif 'side_inputs' in next_node:
-      import pdb;
-      pdb.set_trace()
-
       # If the next node has template parameters, expand them out
       # TODO: Generalize this to work for nodes with more than one side input
       assert len(next_node['side_inputs']) == 1, 'NOT IMPLEMENTED'
@@ -491,6 +488,7 @@ def instantiate_templates_dfs(scene_struct, template, metadata, answer_counts,
     structured_questions.append(state['nodes'])
     answers.append(state['answer'])
     text = random.choice(template['text'])
+    import pdb; pdb.set_trace()
     for name, val in state['vals'].items():
       if val in synonyms:
         val = random.choice(synonyms[val])
@@ -539,10 +537,7 @@ def replace_optionals(s):
 def main(args):
   with open(args.metadata_file, 'r') as f:
     metadata = json.load(f)
-    dataset = metadata['dataset']
-    if dataset != 'CLEVR-v1.data':
-      raise ValueError('Unrecognized dataset "%s"' % dataset)
-  
+
   functions_by_name = {}
   for f in metadata['functions']:
     functions_by_name[f['name']] = f
@@ -581,7 +576,7 @@ def main(args):
         if metadata['dataset'] == 'CLEVR-v1.data':
           answers = list(range(0, 11))
       if final_dtype == 'Text':
-        answers = []
+        answers = string.ascii_lowercase
       template_answer_counts[key[:2]] = defaultdict(int)
       for a in answers:
         template_answer_counts[key[:2]][a] = 0
@@ -609,8 +604,8 @@ def main(args):
   questions = []
   scene_count = 0
   for i, scene in enumerate(all_scenes):
-    scene_fn = scene['image_filename']
-    scene_struct = scene
+    scene_fn = scene['cc']['image_filename']
+    view_struct = scene['cc']
     print('starting image %s (%d / %d)'
           % (scene_fn, i + 1, len(all_scenes)))
 
@@ -633,7 +628,7 @@ def main(args):
         tic = time.time()
 
       ts, qs, ans = instantiate_templates_dfs(
-                      scene_struct,
+                      view_struct,
                       template,
                       metadata,
                       template_answer_counts[(fn, idx)],
@@ -643,7 +638,7 @@ def main(args):
       if args.time_dfs and args.verbose:
         toc = time.time()
         print('that took ', toc - tic)
-      image_index = int(os.path.splitext(scene_fn)[0].split('_')[-1])
+      image_index = int(os.path.splitext(scene_fn)[0].split('_')[-1][1:7])# int(os.path.splitext(scene_fn)[0].split('_')[-1])
       for t, q, a in zip(ts, qs, ans):
         questions.append({
           'split': scene_info['split'],

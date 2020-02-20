@@ -161,14 +161,6 @@ parser.add_argument('--render_tile_size', default=256, type=int,
          "while larger tile sizes may be optimal for GPU-based rendering.")
 
 def main(args):
-  num_digits = 6
-  prefix = '%s_%s_' % (args.filename_prefix, args.split)
-  img_template = '%s%%data%dd.png' % (prefix, num_digits)
-  scene_template = '%s%%data%dd.json' % (prefix, num_digits)
-  blend_template = '%s%%data%dd.blend' % (prefix, num_digits)
-  img_template = os.path.join(args.output_image_dir, img_template)
-  scene_template = os.path.join(args.output_scene_dir, scene_template)
-  blend_template = os.path.join(args.output_blend_dir, blend_template)
 
   if not os.path.isdir(args.output_image_dir):
     os.makedirs(args.output_image_dir)
@@ -179,12 +171,17 @@ def main(args):
   
   all_scene_paths = []
   for i in range(args.num_images):
-    img_path = img_template % (i + args.start_idx)
-    scene_path = scene_template % (i + args.start_idx)
+    prefix = '%s_%s_' % (args.filename_prefix, args.split)
+
+    img_path = prefix + "s" + str((i + args.start_idx)).zfill(6) + ".png"
+    scene_path = img_path.replace(".png", ".json")
+    blend_path = img_path.replace(".png", ".blend")
+
+    img_path = os.path.join(args.output_image_dir, img_path)
+    scene_path = os.path.join(args.output_scene_dir, scene_path)
+    blend_path = os.path.join(args.output_blend_dir, blend_path)
+
     all_scene_paths.append(scene_path)
-    blend_path = None
-    if args.save_blendfiles == 1:
-      blend_path = blend_template % (i + args.start_idx)
     num_objects = random.randint(args.min_objects, args.max_objects)
     render_scene(args,
       num_objects=num_objects,
@@ -260,13 +257,29 @@ def render_scene(args,
     bpy.context.scene.cycles.device = 'GPU'
 
   # This will give ground-truth information about the scene and its objects
-  scene_struct = {
-      'split': output_split,
-      'image_index': output_index,
-      'image_filename': os.path.basename(output_image),
-      'objects': [],
-      'directions': {},
-  }
+  view_struct = {}
+  if args.multi_view:
+    cams = [obj for obj in bpy.data.objects if obj.type == 'CAMERA']
+  else:
+    cams = [obj for obj in bpy.data.objects if obj.name == 'cc']
+
+  if args.multi_view:
+    for idx, cam in enumerate(cams):
+      path_dir = bpy.context.scene.render.filepath
+      path = ".".join(path_dir.split(".")[:-1]) + "_" + cam.name + ".png"
+      view_struct[cam.name] = {'split': output_split,
+        'image_index': output_index + idx,
+        'image_filename': os.path.basename(path.split("/")[-1]),
+        'objects': [],
+        'directions': {}}
+  else:
+    view_struct['cc'] = {
+        'split': output_split,
+        'image_index': output_index,
+        'image_filename': os.path.basename(output_image),
+        'objects': [],
+        'directions': {},
+    }
 
   # Put a plane on the ground so we can compute cardinal directions
   bpy.ops.mesh.primitive_plane_add(radius=5)
@@ -282,7 +295,7 @@ def render_scene(args,
 
   # Figure out the left, up, and behind directions along the plane and record
   # them in the scene structure
-  camera = bpy.data.objects['Camera_canonical']
+  camera = bpy.data.objects['cc']
   #Quaternion((data.781359076499939, data.46651220321655273, data.2125076949596405, data.3559281527996063))
   plane_normal = plane.data.vertices[0].normal
   cam_behind = camera.matrix_world.to_quaternion() * Vector((0, 0, -1))
@@ -297,12 +310,12 @@ def render_scene(args,
   utils.delete_object(plane)
 
   # Save all six axis-aligned directions in the scene struct
-  scene_struct['directions']['behind'] = tuple(plane_behind)
-  scene_struct['directions']['front'] = tuple(-plane_behind)
-  scene_struct['directions']['left'] = tuple(plane_left)
-  scene_struct['directions']['right'] = tuple(-plane_left)
-  scene_struct['directions']['above'] = tuple(plane_up)
-  scene_struct['directions']['below'] = tuple(-plane_up)
+  view_struct['cc']['directions']['behind'] = tuple(plane_behind)
+  view_struct['cc']['directions']['front'] = tuple(-plane_behind)
+  view_struct['cc']['directions']['left'] = tuple(plane_left)
+  view_struct['cc']['directions']['right'] = tuple(-plane_left)
+  view_struct['cc']['directions']['above'] = tuple(plane_up)
+  view_struct['cc']['directions']['below'] = tuple(-plane_up)
 
   # Add random jitter to lamp positions
   if args.key_light_jitter > 0:
@@ -316,35 +329,36 @@ def render_scene(args,
       bpy.data.objects['Lamp_Fill'].location[i] += rand(args.fill_light_jitter)
 
   # Now make some random objects
-  cams = [obj for obj in bpy.data.objects if obj.type == 'CAMERA']
-  texts, blender_texts, objects, blender_objects = add_random_objects(scene_struct, num_objects, args, cams)
+  texts, blender_texts, objects, blender_objects = add_random_objects(view_struct, num_objects, args, cams)
 
   # Render the scene and dump the scene data structure
-  scene_struct['objects'] = objects
-  scene_struct['texts'] = texts
-  scene_struct['relationships'] = compute_all_relationships(scene_struct)
+  for cam in cams:
+    view_struct[cam.name]['objects'] = objects[cam.name]
+    view_struct[cam.name]['texts'] = texts
+    view_struct[cam.name]['relationships'] = compute_all_relationships(view_struct)
   while True:
     try:
       path_dir = bpy.context.scene.render.filepath  # save for restore
-      for cam in [obj for obj in bpy.data.objects if obj.type == 'CAMERA']:
-        bpy.context.scene.camera = cam
-        bpy.context.scene.render.filepath = ".".join(path_dir.split(".")[:-1]) + "_" + cam.name + ".png"
-        print(bpy.context.scene.render.filepath)
+      if args.multi_view:
+        for cam in [obj for obj in bpy.data.objects if obj.type == 'CAMERA']:
+          bpy.context.scene.camera = cam
+          bpy.context.scene.render.filepath = ".".join(path_dir.split(".")[:-1]) + "_" + cam.name + ".png"
+          bpy.ops.render.render(write_still=True)
+          bpy.context.scene.render.filepath = path_dir
+      else:
         bpy.ops.render.render(write_still=True)
-        bpy.context.scene.render.filepath = path_dir
-      # bpy.ops.render.render(write_still=True)
       break
     except Exception as e:
       print(e)
 
   with open(output_scene, 'w') as f:
-    json.dump(scene_struct, f, indent=2)
+    json.dump(view_struct, f, indent=2)
 
-  if output_blendfile is not None:
+  if args.save_blendfiles is not None:
     bpy.ops.wm.save_as_mainfile(filepath=output_blendfile)
 
 
-def add_random_objects(scene_struct, num_objects, args, cams):
+def add_random_objects(view_struct, num_objects, args, cams):
   """
   Add random objects to the current blender scene
   """
@@ -366,12 +380,11 @@ def add_random_objects(scene_struct, num_objects, args, cams):
       shape_color_combos = list(json.load(f).items())
 
   positions = []
-  objects = []
+  objects = {cam.name: [] for cam in cams}
   blender_objects = []
   texts = []
   blender_texts = []
   all_chars = []
-  all_char_bboxes = []
   for i in range(num_objects):
     # Choose a random size
     size_name, r = ('large', 0.7)#random.choice(size_mapping)
@@ -389,7 +402,7 @@ def add_random_objects(scene_struct, num_objects, args, cams):
           utils.delete_object(obj)
         for text in blender_texts:
           utils.delete_object(text)
-        return add_random_objects(scene_struct, num_objects, args, camera)
+        return add_random_objects(view_struct, num_objects, args, cams)
       x = random.uniform(-3, 3)
       y = random.uniform(-3, 3)
       # Check to make sure the new object is further than min_dist from all
@@ -403,7 +416,7 @@ def add_random_objects(scene_struct, num_objects, args, cams):
           dists_good = False
           break
         for direction_name in ['left', 'right', 'front', 'behind']:
-          direction_vec = scene_struct['directions'][direction_name]
+          direction_vec = view_struct['cc']['directions'][direction_name]
           assert direction_vec[2] == 0
           margin = dx * direction_vec[0] + dy * direction_vec[1]
           if 0 < margin < args.margin:
@@ -445,27 +458,28 @@ def add_random_objects(scene_struct, num_objects, args, cams):
     utils.add_material(mat_name, Color=rgba)
 
     # Record data about the object in the scene data structure
-    pixel_coords = utils.get_camera_coords(cams[0], obj.location)
-    objects.append({
-      'shape': obj_name_out,
-      'size': size_name,
-      'material': mat_name_out,
-      '3d_coords': tuple(obj.location),
-      'rotation': theta,
-      'pixel_coords': pixel_coords,
-      'color': color_name,
-    })
+    for cam in cams:
+      pixel_coords = utils.get_camera_coords(cam, obj.location)
+      objects[cam.name].append({
+        'shape': obj_name_out,
+        'size': size_name,
+        'material': mat_name_out,
+        '3d_coords': tuple(obj.location),
+        'rotation': theta,
+        'pixel_coords': pixel_coords,
+        'color': color_name,
+      })
 
     # Generate Text
-    num_chars = random.choice(range(1, 7))
-    chars = "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
+    num_chars = 1 # random.choice(range(1, 7))
+    chars = random.choice(string.ascii_lowercase)# "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
 
     # Add text to Blender
     try:
-      char_bboxes, chars = utils.add_text(chars, random_rotation=args.random_text_rotation)
+      char_bboxes, chars = utils.add_text(chars, args.random_text_rotation, cams)
       all_chars.extend(chars)
     except Exception as e:
-      return purge(blender_objects, blender_texts, scene_struct, num_objects, args, cams)
+      return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
 
     # Select material and color for text
     text = bpy.context.scene.objects.active
@@ -480,35 +494,32 @@ def add_random_objects(scene_struct, num_objects, args, cams):
     blender_texts.append(text)
 
     # Check that all objects are at least partially visible in the rendered image
-    all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object)
-    for textid, visible_pixels in visible_chars.items():
-      for char_bbox in char_bboxes:
-        if char_bbox['id'] == textid:
-          char_bbox['visible_pixels'] = visible_pixels
-    for char_bbox in char_bboxes:
-      if not char_bbox.get("visible_pixels"):
-        char_bbox['visible_pixels'] = 0
-      all_char_bboxes.append(char_bbox)
-    all_chars_visible = [c['visible_pixels'] > 50 for c in all_char_bboxes]
-
-    objects[-1]['text'] = {
-      "font": text.data.font.name,
-      "body": text.data.body,
-      "3d_coords": tuple(text.location),
-      "pixel_coords": utils.get_camera_coords(cams[0], text.location),
-      "color": color_name,
-      "char_bboxes": char_bboxes
-    }
-
+    for cam in cams:
+      bpy.context.scene.camera = cam
+      all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object, cams)
+      for textid, visible_pixels in visible_chars.items():
+        for char_bbox in char_bboxes[cam.name]:
+          if char_bbox['id'] == textid:
+            char_bbox['visible_pixels'] = visible_pixels
+    all_chars_visible = [c['visible_pixels'] > 50 for c in char_bboxes['cc']]
+    for cam in cams:
+      objects[cam.name][-1]['text'] = {
+        "font": text.data.font.name,
+        "body": text.data.body,
+        "3d_coords": tuple(text.location),
+        "pixel_coords": utils.get_camera_coords(cam, text.location),
+        "color": color_name,
+        "char_bboxes": char_bboxes
+      }
 
   if args.enforce_obj_visibility and not all_objects_visible:
-    return purge(blender_objects, blender_texts, scene_struct, num_objects, args, cams)
+    return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
   if args.all_chars_visible and not all(all_chars_visible):
-    return purge(blender_objects, blender_texts, scene_struct, num_objects, args, cams)
+    return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
 
   return texts, blender_texts, objects, blender_objects
 
-def purge(blender_objects, blender_texts, scene_struct, num_objects, args, camera):
+def purge(blender_objects, blender_texts, view_struct, num_objects, args, cams):
   # If any of the objects are fully occluded then start over; delete all
   # objects from the scene and place them all again.
   print('Some objects are occluded; replacing objects')
@@ -519,10 +530,10 @@ def purge(blender_objects, blender_texts, scene_struct, num_objects, args, camer
   for obj in bpy.context.scene.objects:
     if "Text" in obj.name:
       utils.delete_object(obj)
-  return add_random_objects(scene_struct, num_objects, args, camera)
+  return add_random_objects(view_struct, num_objects, args, cams)
 
 
-def compute_all_relationships(scene_struct, eps=0.2):
+def compute_all_relationships(view_struct, eps=0.2):
   """
   Computes relationships between all pairs of objects in the scene.
   
@@ -532,13 +543,13 @@ def compute_all_relationships(scene_struct, eps=0.2):
   object j is left of object i.
   """
   all_relationships = {}
-  for name, direction_vec in scene_struct['directions'].items():
+  for name, direction_vec in view_struct['cc']['directions'].items():
     if name == 'above' or name == 'below': continue
     all_relationships[name] = []
-    for i, obj1 in enumerate(scene_struct['objects']):
+    for i, obj1 in enumerate(view_struct['cc']['objects']):
       coords1 = obj1['3d_coords']
       related = set()
-      for j, obj2 in enumerate(scene_struct['objects']):
+      for j, obj2 in enumerate(view_struct['cc']['objects']):
         if obj1 == obj2: continue
         coords2 = obj2['3d_coords']
         diff = [coords2[k] - coords1[k] for k in [0, 1, 2]]
@@ -549,7 +560,7 @@ def compute_all_relationships(scene_struct, eps=0.2):
   return all_relationships
 
 
-def check_visibility(blender_objects, min_pixels_per_object):
+def check_visibility(blender_objects, min_pixels_per_object, cams):
   """
   Check whether all objects in the scene have some minimum number of visible
   pixels; to accomplish this we assign random (but distinct) colors to all

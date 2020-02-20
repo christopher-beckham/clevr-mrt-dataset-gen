@@ -60,20 +60,6 @@ def bounds(cam, obj, local=False):
     cam_coords.append(get_camera_coords(cam, Vector(coord)))
 
   return cam_coords
-  # rotated = zip(*coords[::-1])
-  #
-  # push_axis = []
-  # for (axis, _list) in zip('xyz', rotated):
-  #   info = lambda: None
-  #   info.max = max(_list)
-  #   info.min = min(_list)
-  #   info.distance = info.max - info.min
-  #   push_axis.append(info)
-  #
-  # originals = dict(zip(['x', 'y', 'z'], push_axis))
-  #
-  # o_details = collections.namedtuple('object_details', 'x y z')
-  # return o_details(**originals)
 
 
 def get_camera_coords(cam, pos):
@@ -163,7 +149,7 @@ def load_font(text):
   text.data.font = font
 
 
-def add_text(body, random_rotation):
+def add_text(body, random_rotation, cams):
   # Take the current object and "increase the resolution"
   obj = bpy.context.active_object
   bpy.ops.object.modifier_add(type='SUBSURF')
@@ -220,13 +206,14 @@ def add_text(body, random_rotation):
     print("wrong number of meshes")
     raise Exception
 
-  char_bboxes = []
-  for i, o in enumerate(chars):
-    bbox_coords = bounds(bpy.context.scene.camera, o)
-    o_loc = get_camera_coords(bpy.context.scene.camera, o.location)
-    char_bboxes.append({"center": o_loc, "bbox": bbox_coords, "id": o.data.name})
-    make_invisible(o)
-  char_bboxes = id_chars(text, char_bboxes)
+  char_bboxes = {cam.name: [] for cam in cams}
+  for cam in cams:
+    for i, o in enumerate(chars):
+      bbox_coords = bounds(cam, o)
+      o_loc = get_camera_coords(cam, o.location)
+      char_bboxes[cam.name].append({"center": o_loc, "bbox": bbox_coords, "id": o.data.name, 'visible_pixels': 0})
+      make_invisible(o)
+    char_bboxes[cam.name] = id_chars(text, char_bboxes[cam.name])
   make_visible(text)
   text.data.extrude = 0.03
 
