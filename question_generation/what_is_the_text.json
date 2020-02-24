@@ -1,5 +1,5 @@
 [{
-	"text": ["Does the text on the <Z> <C> <M> <S> say <T>?"],
+	"text": ["What is the text on the <Z> <C> <M> <S>?"],
 	"nodes": [{
 		"inputs": [],
 		"type": "scene"
@@ -10,7 +10,7 @@
 	},
 	{
 		"inputs": [1],
-		"type": "query_text"
+		"type": "query_text_terminal"
 	}],
 	"params": [{
 		"type": "Size",

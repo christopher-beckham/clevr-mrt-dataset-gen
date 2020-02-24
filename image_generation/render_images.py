@@ -290,8 +290,9 @@ def render_scene(args,
 
   # Add random jitter to camera position
   if args.camera_jitter > 0:
-    for i in range(3):
-      bpy.data.objects['Camera'].location[i] += rand(args.camera_jitter)
+    for cam in cams:
+      for i in range(3):
+        cam.location[i] += rand(args.camera_jitter)
 
   # Figure out the left, up, and behind directions along the plane and record
   # them in the scene structure
@@ -476,15 +477,17 @@ def add_random_objects(view_struct, num_objects, args, cams):
 
     # Add text to Blender
     try:
-      char_bboxes, chars = utils.add_text(chars, args.random_text_rotation, cams)
+      word_bboxes, char_bboxes, chars = utils.add_text(chars, args.random_text_rotation, cams)
       all_chars.extend(chars)
     except Exception as e:
       return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
 
     # Select material and color for text
     text = bpy.context.scene.objects.active
+    temp_dict = color_name_to_rgba.copy()
+    del temp_dict[color_name]
     mat_name, mat_name_out = random.choice(material_mapping)
-    color_name, rgba = random.choice(list(color_name_to_rgba.items()))
+    color_name, rgba = random.choice(list(temp_dict.items()))
     utils.add_material(mat_name, Color=rgba)
 
     for char in chars:
@@ -509,7 +512,8 @@ def add_random_objects(view_struct, num_objects, args, cams):
         "3d_coords": tuple(text.location),
         "pixel_coords": utils.get_camera_coords(cam, text.location),
         "color": color_name,
-        "char_bboxes": char_bboxes
+        "char_bboxes": char_bboxes,
+        "word_bboxes": word_bboxes
       }
 
   if args.enforce_obj_visibility and not all_objects_visible:
@@ -678,8 +682,8 @@ def render_shadeless(blender_objects, path='flat.png'):
 
   # Change these settings back so we render out the PNG images
   bpy.context.scene.render.image_settings.view_settings.view_transform = "Default"
-  bpy.context.scene.render.image_settings.file_format = 'PNG'
-  bpy.context.scene.render.image_settings.color_mode = 'RGBA'
+  bpy.context.scene.render.image_settings.file_format = 'JPEG'
+  bpy.context.scene.render.image_settings.color_mode = 'RGB'
 
   # Undo the above; first restore the materials to objects
   for mat, obj in zip(old_materials, blender_objects):

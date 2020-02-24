@@ -207,6 +207,7 @@ def add_text(body, random_rotation, cams):
     raise Exception
 
   char_bboxes = {cam.name: [] for cam in cams}
+  word_bboxes = {cam.name: [] for cam in cams}
   for cam in cams:
     for i, o in enumerate(chars):
       bbox_coords = bounds(cam, o)
@@ -214,10 +215,34 @@ def add_text(body, random_rotation, cams):
       char_bboxes[cam.name].append({"center": o_loc, "bbox": bbox_coords, "id": o.data.name, 'visible_pixels': 0})
       make_invisible(o)
     char_bboxes[cam.name] = id_chars(text, char_bboxes[cam.name])
+    word_bboxes[cam.name] = make_scale_word_bbox(char_bboxes[cam.name])
   make_visible(text)
   text.data.extrude = 0.03
 
-  return char_bboxes, chars
+  return word_bboxes, char_bboxes, chars
+
+def make_scale_word_bbox(text):
+  min_x = 99999
+  min_y = 99999
+  max_x = 0.
+  max_y = 0.
+  for char in text:
+    for x, y, z in  char['bbox']:
+      if x < min_x:
+        min_x = x
+      if x > max_x:
+        max_x = x
+      if y < min_y:
+        min_y = y
+      if y > max_y:
+        max_y = y
+  min_x = min_x / bpy.context.scene.render.resolution_x
+  min_y = min_y / bpy.context.scene.render.resolution_y
+  max_x = max_x / bpy.context.scene.render.resolution_x
+  max_y = max_y / bpy.context.scene.render.resolution_y
+  w = max_x - min_x
+  h = max_y - min_y
+  return min_x, min_y, w, h
 
 def id_chars(text, char_bboxes):
   # currently assumes script is written left to right

@@ -257,7 +257,7 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
     # Check to make sure the current state is valid
     q = {'nodes': state['nodes']}
 
-    outputs = qeng.answer_question(q, metadata, view_struct, all_outputs=True)
+    outputs = qeng.answer_question(q, metadata, view_struct, state, all_outputs=True)
     answer = outputs[-1]
     if answer == '__INVALID__': continue
 
@@ -379,7 +379,6 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
 
       filter_option_keys = list(filter_options.keys())
       random.shuffle(filter_option_keys)
-      import pdb; pdb.set_trace()
       for k in filter_option_keys:
         new_nodes = []
         cur_next_vals = {k: v for k, v in state['vals'].items()}
@@ -468,6 +467,21 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
           'input_map': input_map,
           'next_template_node': state['next_template_node'] + 1,
         })
+    elif next_node['type'] == "query_text_q":
+      state['vals']['<T>'] = answer if random.random() > 0.5 else random.choice(string.ascii_lowercase)
+      input_map = {k: v for k, v in state['input_map'].items()}
+      input_map[state['next_template_node']] = len(state['nodes'])
+      next_node = {
+        'type': next_node['type'],
+        'inputs': [input_map[idx] for idx in next_node['inputs']],
+      }
+      states.append({
+        'nodes': state['nodes'] + [next_node],
+        'vals': state['vals'],
+        'input_map': input_map,
+        'next_template_node': state['next_template_node'] + 1,
+      })
+
     else:
       input_map = {k: v for k, v in state['input_map'].items()}
       input_map[state['next_template_node']] = len(state['nodes'])
@@ -488,7 +502,6 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
     structured_questions.append(state['nodes'])
     answers.append(state['answer'])
     text = random.choice(template['text'])
-    import pdb; pdb.set_trace()
     for name, val in state['vals'].items():
       if val in synonyms:
         val = random.choice(synonyms[val])
@@ -634,7 +647,7 @@ def main(args):
                       template_answer_counts[(fn, idx)],
                       synonyms,
                       max_instances=args.instances_per_template,
-                      verbose=False)
+                      verbose=True)
       if args.time_dfs and args.verbose:
         toc = time.time()
         print('that took ', toc - tic)

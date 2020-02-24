@@ -146,6 +146,9 @@ def greater_than_handler(view_struct, inputs, side_inputs):
   return inputs[0] > inputs[1]
 
 
+def q_text_handler(view_struct, inputs, side_inputs):
+  print(inputs)
+
 # Register all of the answering handlers here.
 # TODO maybe this would be cleaner with a function decorator that takes
 # care of registration? Not sure. Also what if we want to reuse the same engine
@@ -168,7 +171,9 @@ execute_handlers = {
   'query_material': make_query_handler('material'),
   'query_size': make_query_handler('size'),
   'query_text': make_query_handler('text'),
+  'query_text_q': q_text_handler,
   'exist': exist_handler,
+  'equal_text': equal_handler,
   'equal_color': equal_handler,
   'equal_shape': equal_handler,
   'equal_integer': equal_handler,
@@ -184,7 +189,7 @@ execute_handlers = {
 }
 
 
-def answer_question(question, metadata, view_struct, all_outputs=False,
+def answer_question(question, metadata, view_struct, state, all_outputs=False,
                     cache_outputs=True):
   """
   Use structured scene information to answer a structured question. Most of the
@@ -201,6 +206,11 @@ def answer_question(question, metadata, view_struct, all_outputs=False,
   for node in question['nodes']:
     if cache_outputs and '_output' in node:
       node_output = node['_output']
+    elif node['type'] == "query_text_q":
+      node_output = state['vals']['<T>']
+      if cache_outputs:
+        node['_output'] = node_output
+      node_outputs.append(node_output)
     else:
       node_type = node['type']
       msg = 'Could not find handler for "%s"' % node_type
