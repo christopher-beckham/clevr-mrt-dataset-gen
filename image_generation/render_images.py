@@ -359,7 +359,7 @@ def render_scene(args,
   with open(output_scene, 'w') as f:
     json.dump(view_struct, f, indent=2)
 
-  if args.save_blendfiles is not None:
+  if args.save_blendfiles:
     bpy.ops.wm.save_as_mainfile(filepath=output_blendfile)
 
 
