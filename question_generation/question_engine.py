@@ -147,7 +147,14 @@ def greater_than_handler(view_struct, inputs, side_inputs):
 
 
 def q_text_handler(view_struct, inputs, side_inputs):
-  print(inputs)
+  # This is a stub handler because this framework is only built to operate on visual information, and this module
+  # is meant to operate on text from the question. It's handled in answer_question below.
+  pass
+
+def query_text_terminal(view_struct, inputs, side_inputs):
+  # This is a stub handler because this framework is only built to operate on visual information, and this module
+  # is meant to operate on text from the question. It's handled in answer_question below.
+  pass
 
 # Register all of the answering handlers here.
 # TODO maybe this would be cleaner with a function decorator that takes
@@ -172,6 +179,7 @@ execute_handlers = {
   'query_size': make_query_handler('size'),
   'query_text': make_query_handler('text'),
   'query_text_q': q_text_handler,
+  'query_text_terminal': query_text_terminal,
   'exist': exist_handler,
   'equal_text': equal_handler,
   'equal_color': equal_handler,
@@ -210,6 +218,12 @@ def answer_question(question, metadata, view_struct, state, all_outputs=False,
       node_output = state['vals']['<T>']
       if cache_outputs:
         node['_output'] = node_output
+      node_outputs.append(node_output)
+    elif node['type'] == "query_text_terminal":
+      node_inputs = [node_outputs[idx] for idx in node['inputs']]
+      if cache_outputs:
+        node['_output'] = node_output
+      node_output = view_struct['objects'][node_inputs[0]]['text']['body']
       node_outputs.append(node_output)
     else:
       node_type = node['type']

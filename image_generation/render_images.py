@@ -78,6 +78,10 @@ parser.add_argument('--min_pixels_per_object', default=200, type=int,
     help="All objects will have at least this many visible pixels in the " +
          "final rendered images; this ensures that no objects are fully " +
          "occluded by other objects.")
+parser.add_argument('--min_char_pixels', default=1, type=int,
+    help="All objects will have at least this many visible pixels in the " +
+         "final rendered images; this ensures that no objects are fully " +
+         "occluded by other objects.")
 parser.add_argument('--max_retries', default=50, type=int,
     help="The number of times to try placing an object before giving up and " +
          "re-placing all objects in the scene.")
@@ -504,7 +508,8 @@ def add_random_objects(view_struct, num_objects, args, cams):
         for char_bbox in char_bboxes[cam.name]:
           if char_bbox['id'] == textid:
             char_bbox['visible_pixels'] = visible_pixels
-    all_chars_visible = [c['visible_pixels'] > 50 for c in char_bboxes['cc']]
+    all_chars_visible = [c['visible_pixels'] > args.min_char_pixels for c in char_bboxes['cc']]
+
     for cam in cams:
       objects[cam.name][-1]['text'] = {
         "font": text.data.font.name,
@@ -604,7 +609,6 @@ def check_visibility(blender_objects, min_pixels_per_object, cams):
     i += 1
     was_text, text_name = color_in_colors(color, text_colors)
     was_obj = color_in_objcolors(color, object_colors)
-
     if was_text:
       visible_chars[text_name] = count
     if was_obj and count > min_pixels_per_object:
