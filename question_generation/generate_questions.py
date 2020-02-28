@@ -88,7 +88,6 @@ parser.add_argument('--time_dfs', action='store_true',
     help="Time each depth-first search; must be given with --verbose")
 parser.add_argument('--profile', action='store_true',
     help="If given then run inside cProfile")
-# args = parser.parse_args()
 
 
 def precompute_filter_options(view_struct, metadata):
