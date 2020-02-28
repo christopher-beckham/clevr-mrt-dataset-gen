@@ -524,6 +524,8 @@ def add_random_objects(view_struct, num_objects, args, cams):
           "char_bboxes": char_bboxes,
           "word_bboxes": word_bboxes
         }
+    else:
+      all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object, cams)
 
   if args.enforce_obj_visibility and not all_objects_visible:
     return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
@@ -622,6 +624,7 @@ def check_visibility(blender_objects, min_pixels_per_object, cams):
 
 
 def color_in_colors(color, text_colors):
+  tname = None
   for tname, tc in text_colors.items():
       if color == tc:
         return True, tname
