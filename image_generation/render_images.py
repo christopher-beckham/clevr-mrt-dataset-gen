@@ -9,6 +9,7 @@ from __future__ import print_function
 import math, sys, random, argparse, json, os, tempfile, string
 from datetime import datetime as dt
 from collections import Counter
+import builtins as __builtin__
 
 """
 Renders random scenes using Blender, each with with a random number of objects;
@@ -427,8 +428,8 @@ def add_random_objects(view_struct, num_objects, args, cams):
           assert direction_vec[2] == 0
           margin = dx * direction_vec[0] + dy * direction_vec[1]
           if 0 < margin < args.margin:
-            print(margin, args.margin, direction_name)
-            print('BROKEN MARGIN!')
+            __builtin__.print(margin, args.margin, direction_name)
+            __builtin__.print('BROKEN MARGIN!')
             margins_good = False
             break
         if not margins_good:
@@ -459,7 +460,7 @@ def add_random_objects(view_struct, num_objects, args, cams):
     obj = bpy.context.object
     blender_objects.append(obj)
     positions.append((x, y, r))
-    print("added random object " + str(i))
+    __builtin__.print("added random object " + str(i))
 
     # Attach a random material
     mat_name, mat_name_out = random.choice(material_mapping)
@@ -503,7 +504,7 @@ def add_random_objects(view_struct, num_objects, args, cams):
         utils.add_material(mat_name, Color=rgba)
 
       blender_texts.append(text)
-      print("added text to object " + str(i))
+      __builtin__.print("added text to object " + str(i))
 
       # Check that all objects are at least partially visible in the rendered image
       for cam in cams:
@@ -515,7 +516,7 @@ def add_random_objects(view_struct, num_objects, args, cams):
               char_bbox['visible_pixels'] = visible_pixels
       all_chars_visible = [c['visible_pixels'] > args.min_char_pixels for c in char_bboxes['cc']]
       if args.all_chars_visible and not all(all_chars_visible):
-        print("not all characters were visible, purging and retrying...")
+        __builtin__.print("not all characters were visible, purging and retrying...")
         return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
 
       for cam in cams:
@@ -532,7 +533,7 @@ def add_random_objects(view_struct, num_objects, args, cams):
       all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object, cams)
 
   if args.enforce_obj_visibility and not all_objects_visible:
-    print("not all objects were visible, purging and retrying...")
+    __builtin__.print("not all objects were visible, purging and retrying...")
     return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
 
   return texts, blender_texts, objects, blender_objects
@@ -540,7 +541,7 @@ def add_random_objects(view_struct, num_objects, args, cams):
 def purge(blender_objects, blender_texts, view_struct, num_objects, args, cams):
   # If any of the objects are fully occluded then start over; delete all
   # objects from the scene and place them all again.
-  print('Some objects are occluded; replacing objects')
+  __builtin__.print('Some objects are occluded; replacing objects')
   for obj in blender_objects:
     utils.delete_object(obj)
   for text in blender_texts:
