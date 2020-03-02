@@ -158,11 +158,13 @@ def add_text(body, random_rotation, cams):
   bpy.context.active_object.modifiers['Subsurf'].subdivision_type = "SIMPLE"
 
   # Create the text at the location where the object is
-  bpy.ops.object.text_add(location=obj.location.copy())
+  loc = obj.location.copy()
+  loc[2] = loc[2] - 0.2
+  bpy.ops.object.text_add(location=loc)
   text = bpy.context.active_object
   text.data.body = body
   text.data.extrude = 0.0
-  text.data.size = 0.5
+  text.data.size = 1.0#0.5
   text.data.align_x = "CENTER"
   bpy.context.scene.update()
 
