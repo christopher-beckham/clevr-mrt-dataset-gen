@@ -88,7 +88,6 @@ parser.add_argument('--time_dfs', action='store_true',
     help="Time each depth-first search; must be given with --verbose")
 parser.add_argument('--profile', action='store_true',
     help="If given then run inside cProfile")
-# args = parser.parse_args()
 
 
 def precompute_filter_options(view_struct, metadata):
@@ -146,7 +145,7 @@ def find_filter_options(object_idxs, view_struct, metadata):
 def add_empty_filter_options(attribute_map, metadata, num_to_add):
   # Add some filtering criterion that do NOT correspond to objects
 
-  if metadata['dataset'] == 'CLEVR-v1.data':
+  if metadata['dataset'] == 'CLEVR-v1.0':
     attr_keys = ['Size', 'Color', 'Material', 'Shape']
   else:
     assert False, 'Unrecognized dataset'
@@ -411,7 +410,7 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
             cur_next_vals[param_name] = param_val
             next_input = len(state['nodes']) + len(new_nodes) - 1
           elif param_val is None:
-            if metadata['dataset'] == 'CLEVR-v1.data' and param_type == 'Shape':
+            if metadata['dataset'] == 'CLEVR-v1.0' and param_type == 'Shape':
               param_val = 'thing'
             else:
               param_val = ''
@@ -512,8 +511,7 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
     text = other_heuristic(text, state['vals'])
     text_questions.append(text)
 
-  return text_questions, structured_questions, answers
-
+    return text_questions, structured_questions, answers
 
 
 def replace_optionals(s):
@@ -586,7 +584,7 @@ def main(args):
       if final_dtype == 'Bool':
         answers = [True, False]
       if final_dtype == 'Integer':
-        if metadata['dataset'] == 'CLEVR-v1.data':
+        if metadata['dataset'] == 'CLEVR-v1.0':
           answers = list(range(0, 11))
       if final_dtype == 'Text':
         answers = string.ascii_lowercase
@@ -651,7 +649,12 @@ def main(args):
       if args.time_dfs and args.verbose:
         toc = time.time()
         print('that took ', toc - tic)
-      image_index = int(os.path.splitext(scene_fn)[0].split('_')[-1][1:7])# int(os.path.splitext(scene_fn)[0].split('_')[-1])
+      split = os.path.splitext(scene_fn)[0].split('_')
+      if split[-1][0] == 'c':
+        image_index = int(split[-2][1:7])# int(os.path.splitext(scene_fn)[0].split('_')[-1])
+      else:
+        image_index = int(split[-1][1:7])  # int(os.path.splitext(scene_fn)[0].split('_')[-1])
+
       for t, q, a in zip(ts, qs, ans):
         questions.append({
           'split': scene_info['split'],

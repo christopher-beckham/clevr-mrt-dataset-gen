@@ -264,6 +264,14 @@ def load_materials(material_dir):
     filepath = os.path.join(material_dir, fn, 'NodeTree', name)
     bpy.ops.wm.append(filename=filepath)
 
+def cartesian_to_spherical(cam_x, cam_y, cam_z):
+  # keep in mind that we're in a right-hand rule system, i.e. z is up, x-y is the floor
+  xy = cam_x ** 2 + cam_y ** 2  # ground-projected radius
+  distance = np.sqrt(xy + cam_z ** 2)
+  elevation = np.arctan2(cam_z, np.sqrt(xy))
+  azimuth = np.arctan2(cam_y, cam_x)
+  return distance, elevation, azimuth
+
 
 def add_material(name, **properties):
   """

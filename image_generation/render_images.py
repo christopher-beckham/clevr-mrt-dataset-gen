@@ -89,6 +89,8 @@ parser.add_argument('--max_retries', default=50, type=int,
 # Settings for text
 parser.add_argument('--random_text_rotation', action='store_true',
     help="Determines whether the text will be rotated around the object")
+parser.add_argument('--text', action='store_true',
+    help="Determines whether there will be text on the objects.")
 parser.add_argument('--all_chars_visible', action='store_true',
     help="Determines whether we require that all text characters are visible from one view")
 parser.add_argument('--multi_view', action='store_true', help="should we write out multiple views")
@@ -266,7 +268,6 @@ def render_scene(args,
     cams = [obj for obj in bpy.data.objects if obj.type == 'CAMERA']
   else:
     cams = [obj for obj in bpy.data.objects if obj.name == 'cc']
-
   if args.multi_view:
     for idx, cam in enumerate(cams):
       path_dir = bpy.context.scene.render.filepath
@@ -301,7 +302,7 @@ def render_scene(args,
   # Figure out the left, up, and behind directions along the plane and record
   # them in the scene structure
   camera = bpy.data.objects['cc']
-  #Quaternion((data.781359076499939, data.46651220321655273, data.2125076949596405, data.3559281527996063))
+  #Quaternion((0.781359076499939, 0.46651220321655273, 0.2125076949596405, 0.3559281527996063))
   plane_normal = plane.data.vertices[0].normal
   cam_behind = camera.matrix_world.to_quaternion() * Vector((0, 0, -1))
   cam_left = camera.matrix_world.to_quaternion() * Vector((-1, 0, 0))
@@ -480,50 +481,53 @@ def add_random_objects(view_struct, num_objects, args, cams):
     chars = random.choice(string.ascii_lowercase)# "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
 
     # Add text to Blender
-    try:
-      word_bboxes, char_bboxes, chars = utils.add_text(chars, args.random_text_rotation, cams)
-      all_chars.extend(chars)
-    except Exception as e:
-      return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
+    if args.text:
+      try:
+          word_bboxes, char_bboxes, chars = utils.add_text(chars, args.random_text_rotation, cams)
+          all_chars.extend(chars)
+      except Exception as e:
+        return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
 
-    # Select material and color for text
-    text = bpy.context.scene.objects.active
-    temp_dict = color_name_to_rgba.copy()
-    del temp_dict[color_name]
-    mat_name, mat_name_out = random.choice(material_mapping)
-    color_name, rgba = random.choice(list(temp_dict.items()))
-    utils.add_material(mat_name, Color=rgba)
-
-    for char in chars:
-      bpy.context.scene.objects.active = char
+      # Select material and color for text
+      text = bpy.context.scene.objects.active
+      temp_dict = color_name_to_rgba.copy()
+      del temp_dict[color_name]
+      mat_name, mat_name_out = random.choice(material_mapping)
+      color_name, rgba = random.choice(list(temp_dict.items()))
       utils.add_material(mat_name, Color=rgba)
 
-    blender_texts.append(text)
+      for char in chars:
+        bpy.context.scene.objects.active = char
+        utils.add_material(mat_name, Color=rgba)
 
-    # Check that all objects are at least partially visible in the rendered image
-    for cam in cams:
-      bpy.context.scene.camera = cam
+      blender_texts.append(text)
+
+      # Check that all objects are at least partially visible in the rendered image
+      for cam in cams:
+        bpy.context.scene.camera = cam
+        all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object, cams)
+        for textid, visible_pixels in visible_chars.items():
+          for char_bbox in char_bboxes[cam.name]:
+            if char_bbox['id'] == textid:
+              char_bbox['visible_pixels'] = visible_pixels
+      all_chars_visible = [c['visible_pixels'] > args.min_char_pixels for c in char_bboxes['cc']]
+      if args.all_chars_visible and not all(all_chars_visible):
+        return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
+
+      for cam in cams:
+        objects[cam.name][-1]['text'] = {
+          "font": text.data.font.name,
+          "body": text.data.body,
+          "3d_coords": tuple(text.location),
+          "pixel_coords": utils.get_camera_coords(cam, text.location),
+          "color": color_name,
+          "char_bboxes": char_bboxes,
+          "word_bboxes": word_bboxes
+        }
+    else:
       all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object, cams)
-      for textid, visible_pixels in visible_chars.items():
-        for char_bbox in char_bboxes[cam.name]:
-          if char_bbox['id'] == textid:
-            char_bbox['visible_pixels'] = visible_pixels
-    all_chars_visible = [c['visible_pixels'] > args.min_char_pixels for c in char_bboxes['cc']]
-
-    for cam in cams:
-      objects[cam.name][-1]['text'] = {
-        "font": text.data.font.name,
-        "body": text.data.body,
-        "3d_coords": tuple(text.location),
-        "pixel_coords": utils.get_camera_coords(cam, text.location),
-        "color": color_name,
-        "char_bboxes": char_bboxes,
-        "word_bboxes": word_bboxes
-      }
 
   if args.enforce_obj_visibility and not all_objects_visible:
-    return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
-  if args.all_chars_visible and not all(all_chars_visible):
     return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
 
   return texts, blender_texts, objects, blender_objects
@@ -620,6 +624,7 @@ def check_visibility(blender_objects, min_pixels_per_object, cams):
 
 
 def color_in_colors(color, text_colors):
+  tname = None
   for tname, tc in text_colors.items():
       if color == tc:
         return True, tname
