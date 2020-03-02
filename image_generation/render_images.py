@@ -520,11 +520,12 @@ def add_random_objects(view_struct, num_objects, args, cams):
         return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
 
       for cam in cams:
+        x, y, _ = utils.get_camera_coords(cam, text.location)
         objects[cam.name][-1]['text'] = {
           "font": text.data.font.name,
           "body": text.data.body,
           "3d_coords": tuple(text.location),
-          "pixel_coords": utils.get_camera_coords(cam, text.location),
+          "pixel_coords": (x / bpy.context.scene.render.resolution_x, y / bpy.context.scene.render.resolution_y),
           "color": color_name,
           "char_bboxes": char_bboxes,
           "word_bboxes": word_bboxes
