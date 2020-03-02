@@ -596,7 +596,8 @@ def check_visibility(blender_objects, min_pixels_per_object, cams):
   chars = []
   objs = []
   for obj in blender_objects:
-    if "Mesh" in obj.data.name:
+    __builtin__.print(obj.data.name)
+    if "Mesh" in obj.data.name or "CUText" in obj.data.name:
       chars.append(obj)
     else:
       objs.append(obj)
@@ -605,6 +606,7 @@ def check_visibility(blender_objects, min_pixels_per_object, cams):
   f, path = tempfile.mkstemp(suffix='.exr')
   object_colors, text_colors = render_shadeless(blender_objects, path=path)
   img = bpy.data.images.load(path)
+  __builtin__.print(img)
   p = list(img.pixels)
   color_count = Counter((p[i], p[i+1], p[i+2])
                         for i in range(0, len(p), 4))
@@ -623,7 +625,6 @@ def check_visibility(blender_objects, min_pixels_per_object, cams):
       visible_chars[text_name] = count
     if was_obj and count > min_pixels_per_object:
       num_visible_obs += 1
-
   if num_visible_obs == len(objs):
     return True, visible_chars
   return False, visible_chars
@@ -679,7 +680,7 @@ def render_shadeless(blender_objects, path='flat.png'):
     mat.name = 'Material_%d' % i
     r, g, b = i * .01, i * .01, i * .01
 
-    if "Mesh" in obj.data.name:
+    if "Mesh" in obj.data.name or "CUText" in obj.data.name:
       text_colors[obj.data.name] = (r, g, b)
     else:
       object_colors.add((r, g, b))
