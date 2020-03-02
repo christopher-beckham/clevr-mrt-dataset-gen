@@ -623,7 +623,7 @@ def color_in_colors(color, text_colors):
   for tname, tc in text_colors.items():
       if color == tc:
         return True, tname
-  return False, tname
+  return False, None
 
 def color_in_objcolors(color, obj_colors):
   for c in obj_colors:
@@ -710,8 +710,10 @@ def render_shadeless(blender_objects, path='flat.png'):
 if __name__ == '__main__':
   if INSIDE_BLENDER:
     # Run normally
-    argv = utils.extract_args()
-    args = parser.parse_args(argv)
+#    argv = utils.extract_args()
+#    args = parser.parse_args(argv)
+    import sys
+    args = parser.parse_args(sys.argv[6:])
     main(args)
   elif '--help' in sys.argv or '-h' in sys.argv:
     parser.print_help()
