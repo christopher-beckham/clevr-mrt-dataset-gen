@@ -634,7 +634,7 @@ def color_in_colors(color, text_colors):
   for tname, tc in text_colors.items():
       if color == tc:
         return True, tname
-  return False, None
+  return False, tname
 
 def color_in_objcolors(color, obj_colors):
   for c in obj_colors:
