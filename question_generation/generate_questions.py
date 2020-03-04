@@ -242,7 +242,6 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
                               synonyms, max_instances=None, verbose=False):
 
   param_name_to_type = {p['name']: p['type'] for p in template['params']}
-
   initial_state = {
     'nodes': [node_shallow_copy(template['nodes'][0])],
     'vals': {},
@@ -510,14 +509,13 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
     text = ' '.join(text.split())
     text = other_heuristic(text, state['vals'])
     text_questions.append(text)
-
-    return text_questions, structured_questions, answers
+  return text_questions, structured_questions, answers
 
 
 def replace_optionals(s):
   """
   Each substring of s that is surrounded in square brackets is treated as
-  optional and is removed with probability data.5. For example the string
+  optional and is removed with probability 0.5. For example the string
 
   "A [aa] B [bb]"
 
@@ -553,7 +551,6 @@ def main(args):
   for f in metadata['functions']:
     functions_by_name[f['name']] = f
   metadata['_functions_by_name'] = functions_by_name
-
   # Load templates from disk
   # Key is (filename, file_idx)
   num_loaded_templates = 0
@@ -581,6 +578,7 @@ def main(args):
       final_node_type = template['nodes'][-1]['type']
       final_dtype = node_type_to_dtype[final_node_type]
       answers = metadata['types'][final_dtype]
+
       if final_dtype == 'Bool':
         answers = [True, False]
       if final_dtype == 'Integer':
@@ -637,7 +635,6 @@ def main(args):
         print('trying template ', fn, idx)
       if args.time_dfs and args.verbose:
         tic = time.time()
-
       ts, qs, ans = instantiate_templates_dfs(
                       view_struct,
                       template,
@@ -645,7 +642,7 @@ def main(args):
                       template_answer_counts[(fn, idx)],
                       synonyms,
                       max_instances=args.instances_per_template,
-                      verbose=True)
+                      verbose=args.verbose)
       if args.time_dfs and args.verbose:
         toc = time.time()
         print('that took ', toc - tic)
@@ -699,7 +696,7 @@ def main(args):
         f['value_inputs'] = []
 
   with open(args.output_questions_file, 'w') as f:
-    print('Writing output to %s' % args.output_questions_file)
+    print('Writing %i questions to %s' % (len(questions), args.output_questions_file))
     json.dump({
         'info': scene_info,
         'questions': questions,
