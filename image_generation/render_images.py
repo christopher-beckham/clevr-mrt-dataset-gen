@@ -9,6 +9,7 @@ from __future__ import print_function
 import math, sys, random, argparse, json, os, tempfile, string
 from datetime import datetime as dt
 from collections import Counter
+import numpy as np
 import builtins as __builtin__
 
 """
@@ -273,18 +274,23 @@ def render_scene(args,
     for idx, cam in enumerate(cams):
       path_dir = bpy.context.scene.render.filepath
       path = ".".join(path_dir.split(".")[:-1]) + "_" + cam.name + ".png"
+      # 6 total parameters defining the xyz location and xyz rotation (in radians) of the camera
+      cam_params = np.array([np.array(cam.location), np.array(cam.rotation_euler)]).flatten().tolist()
       view_struct[cam.name] = {'split': output_split,
         'image_index': output_index + idx,
         'image_filename': os.path.basename(path.split("/")[-1]),
         'objects': [],
-        'directions': {}}
+        'directions': {},
+        'cam_params': cam_params}
   else:
+    cam_params = np.array([np.array(cam.location), np.array(cam.rotation_euler)]).flatten().tolist()
     view_struct['cc'] = {
         'split': output_split,
         'image_index': output_index,
         'image_filename': os.path.basename(output_image),
         'objects': [],
         'directions': {},
+        'cam_params': cam_params
     }
 
   # Put a plane on the ground so we can compute cardinal directions
