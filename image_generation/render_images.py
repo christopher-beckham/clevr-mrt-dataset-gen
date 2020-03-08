@@ -96,6 +96,7 @@ parser.add_argument('--text', action='store_true',
 parser.add_argument('--all_chars_visible', action='store_true',
     help="Determines whether we require that all text characters are visible from one view")
 parser.add_argument('--multi_view', action='store_true', help="should we write out multiple views")
+parser.add_argument('--random_views', action='store_true', help="should we sample different view positions around the scene")
 parser.add_argument('--enforce_obj_visibility', action='store_true', help="should all objects be visible from canonical view?")
 
 # Output settings
@@ -268,6 +269,26 @@ def render_scene(args,
   view_struct = {}
   if args.multi_view:
     cams = [obj for obj in bpy.data.objects if obj.type == 'CAMERA']
+    poses = [cam.location for cam in cams]
+
+    print(poses)
+    if args.random_views:
+      scn = bpy.context.scene
+
+      # create the first camera
+      cam1 = bpy.data.cameras.new("Camera 1")
+      cam1.lens = 18
+
+      # create the first camera object
+      cam_obj1 = bpy.data.objects.new("Camera 1", cam1)
+      cam_obj1.location = (9.69, -10.85, 12.388)
+      import mathutils
+      utils.look_at(cam_obj1, mathutils.Vector([0,0,0]))
+      scn.objects.link(cam_obj1)
+      cams = [cams[0], cam_obj1]
+      import pdb; pdb.set_trace()
+      print(cams[0])
+
   else:
     cams = [obj for obj in bpy.data.objects if obj.name == 'cc']
   if args.multi_view:
