@@ -273,30 +273,43 @@ def render_scene(args,
 
     print(poses)
     if args.random_views:
+
+      num_samples = 20
+      # generate the points on a circle of radius r around the scene
+      theta = np.random.uniform(0, 2 * np.pi, num_samples)
+      r = 10
+      x, y = r * np.cos(theta), r * np.sin(theta)
+
       scn = bpy.context.scene
+      origin_empty = cams[0].constraints[0].target
+      cams = [cams[0]]
+      for i in range(num_samples):
 
-      # create the first camera
-      cam1 = bpy.data.cameras.new("Camera 1")
-      cam1.lens = 18
+        # create the first camera
+        cam = bpy.data.cameras.new("cam" + str(i))
 
-      # create the first camera object
-      cam_obj1 = bpy.data.objects.new("Camera 1", cam1)
-      cam_obj1.location = (9.69, -10.85, 12.388)
-      import mathutils
-      utils.look_at(cam_obj1, mathutils.Vector([0,0,0]))
-      scn.objects.link(cam_obj1)
-      cams = [cams[0], cam_obj1]
-      import pdb; pdb.set_trace()
-      print(cams[0])
+        # create the first camera object
+        cam_obj = bpy.data.objects.new("cam" + str(i), cam)
+        cam_obj.location = (x[i], y[i], 6.0)
 
+        m = cam_obj.constraints.new('TRACK_TO')
+        m.target = origin_empty
+        m.track_axis = 'TRACK_NEGATIVE_Z'
+        m.up_axis = 'UP_Y'
+        scn.objects.link(cam_obj)
+        cams.append(cam_obj)
   else:
     cams = [obj for obj in bpy.data.objects if obj.name == 'cc']
   if args.multi_view:
+    bpy.context.scene.update()
+
     for idx, cam in enumerate(cams):
+
       path_dir = bpy.context.scene.render.filepath
       path = ".".join(path_dir.split(".")[:-1]) + "_" + cam.name + ".png"
       # 6 total parameters defining the xyz location and xyz rotation (in radians) of the camera
-      cam_params = np.array([np.array(cam.location), np.array(cam.rotation_euler)]).flatten().tolist()
+
+      cam_params = np.array([np.array(cam.location), np.array(cam.matrix_world.to_euler('XYZ'))]).flatten().tolist()
       view_struct[cam.name] = {'split': output_split,
         'image_index': output_index + idx,
         'image_filename': os.path.basename(path.split("/")[-1]),
@@ -374,7 +387,7 @@ def render_scene(args,
     try:
       path_dir = bpy.context.scene.render.filepath  # save for restore
       if args.multi_view:
-        for cam in [obj for obj in bpy.data.objects if obj.type == 'CAMERA']:
+        for cam in cams:
           bpy.context.scene.camera = cam
           bpy.context.scene.render.filepath = ".".join(path_dir.split(".")[:-1]) + "_" + cam.name + ".png"
           bpy.ops.render.render(write_still=True)
