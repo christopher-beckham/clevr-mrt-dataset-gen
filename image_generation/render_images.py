@@ -96,6 +96,7 @@ parser.add_argument('--text', action='store_true',
 parser.add_argument('--all_chars_visible', action='store_true',
     help="Determines whether we require that all text characters are visible from one view")
 parser.add_argument('--multi_view', action='store_true', help="should we write out multiple views")
+parser.add_argument('--random_views', action='store_true', help="should we sample different view positions around the scene")
 parser.add_argument('--enforce_obj_visibility', action='store_true', help="should all objects be visible from canonical view?")
 
 # Output settings
@@ -268,14 +269,47 @@ def render_scene(args,
   view_struct = {}
   if args.multi_view:
     cams = [obj for obj in bpy.data.objects if obj.type == 'CAMERA']
+    poses = [cam.location for cam in cams]
+
+    print(poses)
+    if args.random_views:
+
+      num_samples = 20
+      # generate the points on a circle of radius r around the scene
+      theta = np.random.uniform(0, 2 * np.pi, num_samples)
+      r = 10
+      x, y = r * np.cos(theta), r * np.sin(theta)
+
+      scn = bpy.context.scene
+      origin_empty = cams[0].constraints[0].target
+      cams = [cams[0]]
+      for i in range(num_samples):
+
+        # create the first camera
+        cam = bpy.data.cameras.new("cam" + str(i))
+
+        # create the first camera object
+        cam_obj = bpy.data.objects.new("cam" + str(i), cam)
+        cam_obj.location = (x[i], y[i], 6.0)
+
+        m = cam_obj.constraints.new('TRACK_TO')
+        m.target = origin_empty
+        m.track_axis = 'TRACK_NEGATIVE_Z'
+        m.up_axis = 'UP_Y'
+        scn.objects.link(cam_obj)
+        cams.append(cam_obj)
   else:
     cams = [obj for obj in bpy.data.objects if obj.name == 'cc']
   if args.multi_view:
+    bpy.context.scene.update()
+
     for idx, cam in enumerate(cams):
+
       path_dir = bpy.context.scene.render.filepath
       path = ".".join(path_dir.split(".")[:-1]) + "_" + cam.name + ".png"
       # 6 total parameters defining the xyz location and xyz rotation (in radians) of the camera
-      cam_params = np.array([np.array(cam.location), np.array(cam.rotation_euler)]).flatten().tolist()
+
+      cam_params = np.array([np.array(cam.location), np.array(cam.matrix_world.to_euler('XYZ'))]).flatten().tolist()
       view_struct[cam.name] = {'split': output_split,
         'image_index': output_index + idx,
         'image_filename': os.path.basename(path.split("/")[-1]),
@@ -353,7 +387,7 @@ def render_scene(args,
     try:
       path_dir = bpy.context.scene.render.filepath  # save for restore
       if args.multi_view:
-        for cam in [obj for obj in bpy.data.objects if obj.type == 'CAMERA']:
+        for cam in cams:
           bpy.context.scene.camera = cam
           bpy.context.scene.render.filepath = ".".join(path_dir.split(".")[:-1]) + "_" + cam.name + ".png"
           bpy.ops.render.render(write_still=True)
