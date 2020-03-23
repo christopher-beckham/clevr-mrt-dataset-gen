@@ -60,16 +60,16 @@
 # Generate Clevr-Kiwi Spatial
 # Generate Train set
 ~/.local/bin/blender/blender --background --python render_images.py -- \
- --base_scene_blendfile image_generation/data/base_scene_tub.blend \
+ --base_scene_blendfile image_generation/data/base_scene_symmetric.blend \
  --output_image_dir image_generation/output/train-clevr-kiwi-spatial/images/ \
  --output_scene_dir image_generation/output/train-clevr-kiwi-spatial/scenes/ \
  --output_scene_file image_generation/output/train-clevr-kiwi-spatial/CLEVR_scenes.json \
  --split train-clevr-kiwi-spatial \
- --multi_view --random_views --num_images 32 --use_gpu 1
+ --multi_view --random_views --num_images 1 --use_gpu 1
 
 # Generate Val set
 ~/.local/bin/blender/blender --background --python render_images.py -- \
- --base_scene_blendfile image_generation/data/base_scene_tub.blend \
+ --base_scene_blendfile image_generation/data/base_scene_symmetric.blend \
  --output_image_dir image_generation/output/val-clevr-kiwi-spatial/images/ \
  --output_scene_dir image_generation/output/val-clevr-kiwi-spatial/scenes/ \
  --output_scene_file image_generation/output/val-clevr-kiwi-spatial/CLEVR_scenes.json \
@@ -78,7 +78,7 @@
 
 ## Generate test set
 ~/.local/bin/blender/blender --background --python render_images.py -- \
- --base_scene_blendfile image_generation/data/base_scene_tub.blend \
+ --base_scene_blendfile image_generation/data/base_scene_symmetric.blend \
  --output_image_dir image_generation/output/test-clevr-kiwi-spatial/images/ \
  --output_scene_dir image_generation/output/test-clevr-kiwi-spatial/scenes/ \
  --output_scene_file image_generation/output/test-clevr-kiwi-spatial/CLEVR_scenes.json \
