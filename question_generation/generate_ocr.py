@@ -9,7 +9,10 @@ import question_engine as qeng
 parser = argparse.ArgumentParser()
 
 # Inputs
-parser.add_argument('--input_scene_file', default='../output/CLEVR_scenes.json',
+# parser.add_argument('--input_scene_file', default='../output/CLEVR_scenes.json',
+#     help="JSON file containing ground-truth scene information for all images " +
+#          "from render_images.py")
+parser.add_argument('--input_data_dir',
     help="JSON file containing ground-truth scene information for all images " +
          "from render_images.py")
 
@@ -19,9 +22,21 @@ parser.add_argument('--output_ocr_file',
     help="The output file to write containing generated questions")
 
 def main(args):
-    with open(args.input_scene_file, 'r') as f:
-        scene_data = json.load(f)
-        all_scenes = scene_data['scenes']
+    try:
+        with open(args.input_scene_file, 'r') as f:
+                scene_data = json.load(f)
+                all_scenes = scene_data['scenes']
+    except Exception:
+        all_scenes = []
+        path = args.input_data_dir
+        # path = args.input_scene_file # "/".join(args.input_scene_file.split("/")[:-1])
+
+        for subdir in os.listdir(path):
+            if not os.path.isdir(os.path.join(path, subdir)):
+                continue
+            with open(os.path.join(path, subdir, "scenes.json"), 'r') as f:
+                scene_data = json.load(f)
+                all_scenes.extend(scene_data['scenes'])
 
     tokens = []
     for i, scene in enumerate(all_scenes):

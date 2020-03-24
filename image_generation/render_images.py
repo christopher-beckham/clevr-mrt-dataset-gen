@@ -98,6 +98,7 @@ parser.add_argument('--text', action='store_true',
 parser.add_argument('--all_chars_visible', action='store_true',
     help="Determines whether we require that all text characters are visible from one view")
 parser.add_argument('--multi_view', action='store_true', help="should we write out multiple views")
+parser.add_argument('--shadow_less', action='store_true', help="don't render shadows")
 parser.add_argument('--random_views', action='store_true', help="should we sample different view positions around the scene")
 parser.add_argument('--enforce_obj_visibility', action='store_true', help="should all objects be visible from canonical view?")
 
@@ -380,6 +381,11 @@ def render_scene(args,
 
   # Now make some random objects
   texts, blender_texts, objects, blender_objects = add_random_objects(view_struct, num_objects, args, cams)
+
+  if args.shadow_less:
+    for obj in blender_objects:
+      bpy.context.scene.objects.active = obj
+      bpy.context.object.cycles_visibility.shadow = False
 
   # Render the scene and dump the scene data structure
   for cam in cams:
