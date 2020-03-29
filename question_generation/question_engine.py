@@ -197,7 +197,7 @@ execute_handlers = {
 }
 
 
-def answer_question(question, metadata, view_struct, state, all_outputs=False,
+def answer_question(question, metadata, view_struct, state=None, all_outputs=False,
                     cache_outputs=True):
   """
   Use structured scene information to answer a structured question. Most of the
@@ -302,6 +302,7 @@ def is_degenerate(question, metadata, view_struct, answer=None, verbose=False):
         'nodes': insert_scene_node(question['nodes'], idx)
       }
       new_answer = answer_question(new_question, metadata, view_struct)
+
       if verbose:
         print('here is truncated question:')
         for i, n in enumerate(new_question['nodes']):

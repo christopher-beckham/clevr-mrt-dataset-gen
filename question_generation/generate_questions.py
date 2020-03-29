@@ -250,12 +250,13 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
   }
   states = [initial_state]
   final_states = []
+
   while states:
     state = states.pop()
     # Check to make sure the current state is valid
     q = {'nodes': state['nodes']}
-
     outputs = qeng.answer_question(q, metadata, view_struct, state, all_outputs=True)
+
     answer = outputs[-1]
     if answer == '__INVALID__': continue
 
@@ -595,10 +596,13 @@ def main(args):
 
   # Read file containing input scenes
   all_scenes = []
-  with open(args.input_scene_file, 'r') as f:
-    scene_data = json.load(f)
-    all_scenes = scene_data['scenes']
-    scene_info = scene_data['info']
+  for f in os.listdir(args.input_scene_file):
+    if ".json" in f:
+      continue
+    with open(os.path.join(args.input_scene_file, f, 'scenes.json'), 'r') as f:
+      scene_data = json.load(f)
+      all_scenes.extend(scene_data['scenes'])
+      scene_info = scene_data['info']
   begin = args.scene_start_idx
   if args.num_scenes > 0:
     end = args.scene_start_idx + args.num_scenes
@@ -635,6 +639,7 @@ def main(args):
         print('trying template ', fn, idx)
       if args.time_dfs and args.verbose:
         tic = time.time()
+
       ts, qs, ans = instantiate_templates_dfs(
                       view_struct,
                       template,
