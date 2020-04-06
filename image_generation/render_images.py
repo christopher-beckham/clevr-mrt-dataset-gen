@@ -321,7 +321,7 @@ def render_scene(args,
         'directions': {},
         'cam_params': cam_params}
   else:
-    cam_params = list(cam.location[:]) + list(cam.rotation_euler[:])
+    cam_params = list(cams[0].location[:]) + list(cams[0].rotation_euler[:])
     view_struct['cc'] = {
         'split': output_split,
         'image_index': output_index,
@@ -342,7 +342,7 @@ def render_scene(args,
   if args.camera_jitter > 0:
     for cam in cams:
       for i in range(3):
-        cam.location[i] += rand(args.camera_jitter)
+        cams[0].location[i] += rand(args.camera_jitter)
 
   # Figure out the left, up, and behind directions along the plane and record
   # them in the scene structure
