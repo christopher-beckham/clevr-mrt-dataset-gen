@@ -1,0 +1,67 @@
+[{
+	"text": ["How many <Z3> <C3> <M3> <S3>s are <R2> the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>?", "What number of <Z3> <C3> <M3> <S3>s are <R2> the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; how many <Z3> <C3> <M3> <S3>s are <R2> it?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; what number of <Z3> <C3> <M3> <S3>s are <R2> it?"],
+	"nodes": [{
+		"inputs": [],
+		"type": "scene"
+	}, {
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>", "<T>"],
+		"inputs": [0],
+		"type": "filter_text_unique"
+	}, {
+		"side_inputs": ["<R>", "<Z2>", "<C2>", "<M2>", "<S2>"],
+		"inputs": [1],
+		"type": "relate_filter_unique"
+	}, {
+		"side_inputs": ["<R2>", "<Z3>", "<C3>", "<M3>", "<S3>"],
+		"inputs": [2],
+		"type": "relate_filter_count"
+	}],
+	"params": [{
+		"type": "Size",
+		"name": "<Z>"
+	}, {
+		"type": "Color",
+		"name": "<C>"
+	}, {
+		"type": "Material",
+		"name": "<M>"
+	}, {
+		"type": "Shape",
+		"name": "<S>"
+	},{
+		"type": "Text",
+		"name": "<T>"
+	}, {
+		"type": "Relation",
+		"name": "<R>"
+	}, {
+		"type": "Size",
+		"name": "<Z2>"
+	}, {
+		"type": "Color",
+		"name": "<C2>"
+	}, {
+		"type": "Material",
+		"name": "<M2>"
+	}, {
+		"type": "Shape",
+		"name": "<S2>"
+	}, {
+		"type": "Relation",
+		"name": "<R2>"
+	}, {
+		"type": "Size",
+		"name": "<Z3>"
+	}, {
+		"type": "Color",
+		"name": "<C3>"
+	}, {
+		"type": "Material",
+		"name": "<M3>"
+	}, {
+		"type": "Shape",
+		"name": "<S3>"
+	}],
+	"constraints": [],
+	"require_text": "True"
+}]

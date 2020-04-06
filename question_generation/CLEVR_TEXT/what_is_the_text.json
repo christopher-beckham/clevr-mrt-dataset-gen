@@ -1,5 +1,5 @@
 [{
-	"text": ["What is the text on the <Z> <C> <M> <S>?"],
+	"text": ["What is the text on the <Z> <C> <M> <S>?", "What does the text on the <Z> <C> <M> <S> say?"],
 	"nodes": [{
 		"inputs": [],
 		"type": "scene"

@@ -90,28 +90,40 @@ parser.add_argument('--profile', action='store_true',
     help="If given then run inside cProfile")
 
 
-def precompute_filter_options(view_struct, metadata):
+def precompute_filter_options(view_struct, metadata, template=None):
   # Keys are tuples (size, color, shape, material) (where some may be None)
   # and values are lists of object idxs that match the filter criterion
   attribute_map = {}
-  if metadata['dataset'] == 'CLEVR-v1.0':
-    attr_keys = ['size', 'color', 'material', 'shape']
-  elif metadata['dataset'] == "CLEVR_TEXT":
-    attr_keys = ['size', 'color', 'material', 'shape']
-  else:
-    assert False, 'Unrecognized dataset'
+
+
+  attr_keys = ['size', 'color', 'material', 'shape']
+  attr_mask_keys = attr_keys
+  if template:
+    requires_text = bool(template.get("require_text", False))
+    if requires_text:
+      attr_mask_keys = attr_keys
+      attr_keys = ['size', 'color', 'material', 'shape', 'text']
 
   # Precompute masks
   masks = []
-  for i in range(2 ** len(attr_keys)):
+  for i in range(2 ** len(attr_mask_keys)):
     mask = []
-    for j in range(len(attr_keys)):
+    for j in range(len(attr_mask_keys)):
       mask.append((i // (2 ** j)) % 2)
+    if len(attr_mask_keys) != len(attr_keys):
+      mask.append(1)
     masks.append(mask)
   for object_idx, obj in enumerate(view_struct['objects']):
     if metadata['dataset'] == 'CLEVR-v1.0':
       keys = [tuple(obj[k] for k in attr_keys)]
-
+    elif metadata['dataset'] == "CLEVR_TEXT":
+      keys = []
+      for k in attr_keys:
+        if k == "text":
+          keys.append(obj[k]['body'])
+        else:
+          keys.append(obj[k])
+      keys = [tuple(keys)]
     for mask in masks:
       for key in keys:
         masked_key = []
@@ -128,12 +140,11 @@ def precompute_filter_options(view_struct, metadata):
   view_struct['_filter_options'] = attribute_map
 
 
-def find_filter_options(object_idxs, view_struct, metadata):
+def find_filter_options(object_idxs, view_struct, metadata, template):
   # Keys are tuples (size, color, shape, material) (where some may be None)
   # and values are lists of object idxs that match the filter criterion
-
   if '_filter_options' not in view_struct:
-    precompute_filter_options(view_struct, metadata)
+    precompute_filter_options(view_struct, metadata, template)
 
   attribute_map = {}
   object_idxs = set(object_idxs)
@@ -147,6 +158,8 @@ def add_empty_filter_options(attribute_map, metadata, num_to_add):
 
   if metadata['dataset'] == 'CLEVR-v1.0':
     attr_keys = ['Size', 'Color', 'Material', 'Shape']
+  elif metadata['dataset'] == 'CLEVR_TEXT':
+    attr_keys = ['Size', 'Color', 'Material', 'Shape', 'Text']
   else:
     assert False, 'Unrecognized dataset'
   
@@ -256,7 +269,6 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
     # Check to make sure the current state is valid
     q = {'nodes': state['nodes']}
     outputs = qeng.answer_question(q, metadata, view_struct, state, all_outputs=True)
-
     answer = outputs[-1]
     if answer == '__INVALID__': continue
 
@@ -277,7 +289,7 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
         p = constraint['params'][0]
         p_type = param_name_to_type[p]
         v = state['vals'].get(p)
-        if v is not None:
+        if v is not None and v is not '':
           skip = False
           if p_type == 'Shape' and v != 'thing': skip = True
           if p_type != 'Shape' and v != '': skip = True
@@ -346,32 +358,33 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
     next_node = node_shallow_copy(next_node)
 
     special_nodes = {
-        'filter_unique', 'filter_count', 'filter_exist', 'filter_text', 'filter',
-        'relate_filter', 'relate_filter_unique', 'relate_filter_count',
-        'relate_filter_exist',
+        'filter_unique', 'filter_text_unique', 'filter_count', 'filter_text_count', 'filter_exist', 'filter_text_exist',
+        'filter_text', 'filter', 'relate_filter', 'relate_filter_unique', 'relate_filter_count',
+        'relate_filter_text_count', 'relate_filter_exist'
     }
     if next_node['type'] in special_nodes:
+
       if next_node['type'].startswith('relate_filter'):
         unique = (next_node['type'] == 'relate_filter_unique')
         include_zero = (next_node['type'] == 'relate_filter_count'
-                        or next_node['type'] == 'relate_filter_exist')
+                        or next_node['type'] == 'relate_filter_exist' or next_node['type'] == 'relate_filter_text_count')
         filter_options = find_relate_filter_options(answer, view_struct, metadata,
                             unique=unique, include_zero=include_zero)
       else:
-        filter_options = find_filter_options(answer, view_struct, metadata)
+        filter_options = find_filter_options(answer, view_struct, metadata, template)
         if next_node['type'] == 'filter':
           # Remove null filter
           filter_options.pop((None, None, None, None), None)
-        if next_node['type'] == 'filter_unique':
+        if next_node['type'] == 'filter_unique' or next_node['type'] == 'filter_text_unique':
           # Get rid of all filter options that don't result in a single object
           filter_options = {k: v for k, v in filter_options.items()
                             if len(v) == 1}
         else:
           # Add some filter options that do NOT correspond to the scene
-          if next_node['type'] == 'filter_exist':
+          if next_node['type'] == 'filter_exist' or next_node['type'] == 'filter_text_exist':
             # For filter_exist we want an equal number that do and don't
             num_to_add = len(filter_options)
-          elif next_node['type'] == 'filter_count' or next_node['type'] == 'filter':
+          elif next_node['type'] == 'filter_count' or next_node['type'] == 'filter' or next_node['type'] == 'filter_text_count':
             # For filter_count add nulls equal to the number of singletons
             num_to_add = sum(1 for k, v in filter_options.items() if len(v) == 1)
           add_empty_filter_options(filter_options, metadata, num_to_add)
@@ -409,6 +422,7 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
             })
             cur_next_vals[param_name] = param_val
             next_input = len(state['nodes']) + len(new_nodes) - 1
+
           elif param_val is None:
             if metadata['dataset'] == 'CLEVR-v1.0' and param_type == 'Shape':
               param_val = 'thing'
@@ -509,6 +523,8 @@ def instantiate_templates_dfs(view_struct, template, metadata, answer_counts,
     text = replace_optionals(text)
     text = ' '.join(text.split())
     text = other_heuristic(text, state['vals'])
+    if ' s ' in text:
+      text = text.replace(" s ", " things ")
     text_questions.append(text)
   return text_questions, structured_questions, answers
 
@@ -548,6 +564,9 @@ def main(args):
   with open(args.metadata_file, 'r') as f:
     metadata = json.load(f)
 
+  if "CLEVR_TEXT" in args.template_dir:
+    metadata['dataset'] = "CLEVR_TEXT"
+
   functions_by_name = {}
   for f in metadata['functions']:
     functions_by_name[f['name']] = f
@@ -579,11 +598,10 @@ def main(args):
       final_node_type = template['nodes'][-1]['type']
       final_dtype = node_type_to_dtype[final_node_type]
       answers = metadata['types'][final_dtype]
-
       if final_dtype == 'Bool':
         answers = [True, False]
       if final_dtype == 'Integer':
-        if metadata['dataset'] == 'CLEVR-v1.0':
+        if metadata['dataset'] == 'CLEVR-v1.0' or metadata['dataset'] == 'CLEVR_TEXT':
           answers = list(range(0, 11))
       if final_dtype == 'Text':
         answers = string.ascii_lowercase

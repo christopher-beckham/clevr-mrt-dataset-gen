@@ -1,0 +1,158 @@
+[{
+	"text": ["How many <Z> <C> <M> <S>s are there that say <T>?", "What number of <Z> <C> <M> <S>s are there that say <T>?"],
+	"nodes": [{
+		"inputs": [],
+		"type": "scene"
+	}, {
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>", "<T>"],
+		"inputs": [0],
+		"type": "filter_text_count"
+	}],
+	"params": [{
+		"type": "Size",
+		"name": "<Z>"
+	}, {
+		"type": "Color",
+		"name": "<C>"
+	}, {
+		"type": "Material",
+		"name": "<M>"
+	}, {
+		"type": "Shape",
+		"name": "<S>"
+	}, {
+		"type": "Text",
+		"name": "<T>"
+	}],
+	"constraints": [],
+	"require_text": "True"
+}, {
+	"text": ["Are there any <Z> <C> <M> <S>s that say <T>?", "Are any <Z> <C> <M> <S>s with the text <T> visible?", "Is there a <Z> <C> <M> <S> with the text <T>?"],
+	"nodes": [{
+		"inputs": [],
+		"type": "scene"
+	}, {
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>", "<T>"],
+		"inputs": [0],
+		"type": "filter_text_exist"
+	}],
+	"params": [{
+		"type": "Size",
+		"name": "<Z>"
+	}, {
+		"type": "Color",
+		"name": "<C>"
+	}, {
+		"type": "Material",
+		"name": "<M>"
+	}, {
+		"type": "Shape",
+		"name": "<S>"
+	}, {
+		"type": "Text",
+		"name": "<T>"
+	}],
+	"constraints": [],
+	"require_text": "True"
+}, {
+	"text": ["What shape is the <Z> <C> <M> <S> with the text <T>?", "What is the shape of the <Z> <C> <M> <S> with the text <T>?", "The <Z> <C> <M> <S> that says <T> has what shape?", "What is the shape of the <Z> <C> <M> <S> that says <T>?", "There is a <Z> <C> <M> <S> that says <T>; what shape is it?", "The <Z> <C> <M> <S> that says <T> is what shape?"],
+	"nodes": [{
+		"inputs": [],
+		"type": "scene"
+	}, {
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>", "<T>"],
+		"inputs": [0],
+		"type": "filter_text_unique"
+	}, {
+		"inputs": [1],
+		"type": "query_shape"
+	}],
+	"params": [{
+		"type": "Size",
+		"name": "<Z>"
+	}, {
+		"type": "Color",
+		"name": "<C>"
+	}, {
+		"type": "Material",
+		"name": "<M>"
+	}, {
+		"type": "Shape",
+		"name": "<S>"
+	}, {
+		"type": "Text",
+		"name": "<T>"
+	}],
+	"constraints": [{
+		"params": ["<S>"],
+		"type": "NULL"
+	}],
+	"require_text": "True"
+}, {
+	"text": ["What color is the <Z> <C> <M> <S> with the text <T>?", "What is the color of the <Z> <C> <M> <S> with the text <T>?", "The <Z> <C> <M> <S> that says <T> has what color?", "What is the color of the <Z> <C> <M> <S> that says <T>?", "There is a <Z> <C> <M> <S> that says <T>; what color is it?", "The <Z> <C> <M> <S> that says <T> is what color?"],
+	"nodes": [{
+		"inputs": [],
+		"type": "scene"
+	}, {
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>", "<T>"],
+		"inputs": [0],
+		"type": "filter_text_unique"
+	}, {
+		"inputs": [1],
+		"type": "query_color"
+	}],
+	"params": [{
+		"type": "Size",
+		"name": "<Z>"
+	}, {
+		"type": "Color",
+		"name": "<C>"
+	}, {
+		"type": "Material",
+		"name": "<M>"
+	}, {
+		"type": "Shape",
+		"name": "<S>"
+	}, {
+		"type": "Text",
+		"name": "<T>"
+	}],
+	"constraints": [{
+		"params": ["<C>"],
+		"type": "NULL"
+	}]
+}, {
+	"text": ["What size is the <Z> <C> <M> <S> with the text <T>?", "What is the size of the <Z> <C> <M> <S> with the text <T>?", "The <Z> <C> <M> <S> that says <T> has what size?", "What is the size of the <Z> <C> <M> <S> that says <T>?", "There is a <Z> <C> <M> <S> that says <T>; what size is it?", "The <Z> <C> <M> <S> that says <T> is what size?"],
+	"nodes": [{
+		"inputs": [],
+		"type": "scene"
+	}, {
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>", "<T>"],
+		"inputs": [0],
+		"type": "filter_text_unique"
+	}, {
+		"inputs": [1],
+		"type": "query_size"
+	}],
+	"params": [{
+		"type": "Size",
+		"name": "<Z>"
+	}, {
+		"type": "Color",
+		"name": "<C>"
+	}, {
+		"type": "Material",
+		"name": "<M>"
+	}, {
+		"type": "Shape",
+		"name": "<S>"
+	}, {
+		"type": "Text",
+		"name": "<T>"
+	}],
+	"constraints": [{
+		"params": ["<Z>"],
+		"type": "NULL"
+	}]
+}]
+

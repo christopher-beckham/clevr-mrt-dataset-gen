@@ -33,8 +33,12 @@ def make_filter_handler(attribute):
     assert len(side_inputs) == 1
     value = side_inputs[0]
     output = []
+
     for idx in inputs[0]:
-      atr = view_struct['objects'][idx][attribute]
+      if attribute == 'text':
+        atr = view_struct['objects'][idx][attribute]['body']
+      else:
+        atr = view_struct['objects'][idx][attribute]
       if value == atr or value in atr:
         output.append(idx)
     return output
@@ -210,7 +214,6 @@ def answer_question(question, metadata, view_struct, state=None, all_outputs=Fal
   """
   all_input_types, all_output_types = [], []
   node_outputs = []
-
   for node in question['nodes']:
     if cache_outputs and '_output' in node:
       node_output = node['_output']
@@ -238,7 +241,6 @@ def answer_question(question, metadata, view_struct, state=None, all_outputs=Fal
     node_outputs.append(node_output)
     if node_output == '__INVALID__':
       break
-
   if all_outputs:
     return node_outputs
   else:

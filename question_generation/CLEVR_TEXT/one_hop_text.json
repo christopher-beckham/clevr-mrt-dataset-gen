@@ -1,18 +1,24 @@
 [{
-	"text": ["What number of <Z2> <C2> <M2> <S2>s are <R> the <Z> <C> <M> <S>?", "How many <Z2> <C2> <M2> <S2>s are <R> the <Z> <C> <M> <S>?", "There is a <Z> <C> <M> <S>; how many <Z2> <C2> <M2> <S2>s are <R> it?", "There is a <Z> <C> <M> <S>; what number of <Z2> <C2> <M2> <S2>s are <R> it?"],
+	"text": ["What number of <Z2> <C2> <M2> <S2>s are <R> the <Z> <C> <M> <S> that says <T>?", "How many <Z2> <C2> <M2> <S2>s are <R> the <Z> <C> <M> <S> that says <T>?", "There is a <Z> <C> <M> <S> that says <T>; how many <Z2> <C2> <M2> <S2>s are <R> it?", "There is a <Z> <C> <M> <S> that says <T>; what number of <Z2> <C2> <M2> <S2>s are <R> it?"],
 	"nodes": [{
 		"inputs": [],
 		"type": "scene"
 	}, {
-		"side_inputs": ["<Z>", "<C>", "<M>", "<S>"],
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>","<T>"],
 		"inputs": [0],
-		"type": "filter_unique"
+		"type": "filter_text_unique"
 	}, {
 		"side_inputs": ["<R>", "<Z2>", "<C2>", "<M2>", "<S2>"],
 		"inputs": [1],
-		"type": "relate_filter_count"
+		"type": "relate_filter_text_count"
 	}],
 	"params": [{
+		"type": "Text",
+		"name": "<T>"
+	}, {
+		"type": "Relation",
+		"name": "<R>"
+	}, {
 		"type": "Size",
 		"name": "<Z>"
 	}, {
@@ -24,10 +30,7 @@
 	}, {
 		"type": "Shape",
 		"name": "<S>"
-	}, {
-		"type": "Relation",
-		"name": "<R>"
-	}, {
+	},{
 		"type": "Size",
 		"name": "<Z2>"
 	}, {
@@ -40,16 +43,17 @@
 		"type": "Shape",
 		"name": "<S2>"
 	}],
-	"constraints": []
+	"constraints": [],
+	"require_text": "True"
 }, {
-	"text": ["Are there any <Z2> <C2> <M2> <S2>s <R> the <Z> <C> <M> <S>?", "There is a <Z> <C> <M> <S>; are there any <Z2> <C2> <M2> <S2>s <R> it?"],
+	"text": ["Are there any <Z2> <C2> <M2> <S2>s <R> the <Z> <C> <M> <S> that says <T>?", "There is a <Z> <C> <M> <S> that says <T>; are there any <Z2> <C2> <M2> <S2>s <R> it?"],
 	"nodes": [{
 		"inputs": [],
 		"type": "scene"
 	}, {
-		"side_inputs": ["<Z>", "<C>", "<M>", "<S>"],
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>", "<T>"],
 		"inputs": [0],
-		"type": "filter_unique"
+		"type": "filter_text_unique"
 	}, {
 		"side_inputs": ["<R>", "<Z2>", "<C2>", "<M2>", "<S2>"],
 		"inputs": [1],
@@ -67,6 +71,9 @@
 	}, {
 		"type": "Shape",
 		"name": "<S>"
+	},{
+		"type": "Text",
+		"name": "<T>"
 	}, {
 		"type": "Relation",
 		"name": "<R>"
@@ -83,16 +90,17 @@
 		"type": "Shape",
 		"name": "<S2>"
 	}],
-	"constraints": []
+	"constraints": [],
+	"require_text": "True"
 }, {
-	"text": ["What size is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>?", "What is the size of the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>?", "How big is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>; what size is it?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>; how big is it?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>; what is its size?"],
+	"text": ["What size is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>?", "What is the size of the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>?", "How big is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>  that says <T>?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; what size is it?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; how big is it?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; what is its size?"],
 	"nodes": [{
 		"inputs": [],
 		"type": "scene"
 	}, {
-		"side_inputs": ["<Z>", "<C>", "<M>", "<S>"],
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>", "<T>"],
 		"inputs": [0],
-		"type": "filter_unique"
+		"type": "filter_text_unique"
 	}, {
 		"side_inputs": ["<R>", "<Z2>", "<C2>", "<M2>", "<S2>"],
 		"inputs": [1],
@@ -113,6 +121,9 @@
 	}, {
 		"type": "Shape",
 		"name": "<S>"
+	},{
+		"type": "Text",
+		"name": "<T>"
 	}, {
 		"type": "Relation",
 		"name": "<R>"
@@ -132,16 +143,17 @@
 	"constraints": [{
 		"params": ["<Z2>"],
 		"type": "NULL"
-	}]
-}, {
-	"text": ["What color is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>?", "What is the color of the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>?", "The <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> is what color?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>; what color is it?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>; what is its color?"],
+	}],
+	"require_text": "True"
+},{
+	"text": ["What color is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>?", "What is the color of the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>?", "The <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T> is what color?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; what color is it?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; what is its color?"],
 	"nodes": [{
 		"inputs": [],
 		"type": "scene"
 	}, {
-		"side_inputs": ["<Z>", "<C>", "<M>", "<S>"],
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>", "<T>"],
 		"inputs": [0],
-		"type": "filter_unique"
+		"type": "filter_text_unique"
 	}, {
 		"side_inputs": ["<R>", "<Z2>", "<C2>", "<M2>", "<S2>"],
 		"inputs": [1],
@@ -163,6 +175,9 @@
 		"type": "Shape",
 		"name": "<S>"
 	}, {
+		"type": "Text",
+		"name": "<T>"
+	}, {
 		"type": "Relation",
 		"name": "<R>"
 	}, {
@@ -181,16 +196,17 @@
 	"constraints": [{
 		"params": ["<C2>"],
 		"type": "NULL"
-	}]
+	}],
+	"require_text": "True"
 }, {
-	"text": ["What is the material of the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>?", "What material is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>?", "What is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> made of?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>; what is its material?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>; what material is it?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>; what is it made of?"],
+	"text": ["What is the material of the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>?", "What material is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>?", "What is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T> made of?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; what is its material?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; what material is it?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; what is it made of?"],
 	"nodes": [{
 		"inputs": [],
 		"type": "scene"
 	}, {
-		"side_inputs": ["<Z>", "<C>", "<M>", "<S>"],
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>", "<T>"],
 		"inputs": [0],
-		"type": "filter_unique"
+		"type": "filter_text_unique"
 	}, {
 		"side_inputs": ["<R>", "<Z2>", "<C2>", "<M2>", "<S2>"],
 		"inputs": [1],
@@ -212,6 +228,9 @@
 		"type": "Shape",
 		"name": "<S>"
 	}, {
+		"type": "Text",
+		"name": "<T>"
+	}, {
 		"type": "Relation",
 		"name": "<R>"
 	}, {
@@ -230,16 +249,17 @@
 	"constraints": [{
 		"params": ["<M2>"],
 		"type": "NULL"
-	}]
+	}],
+	"require_text": "True"
 }, {
-	"text": ["What shape is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>?", "What is the shape of the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>?", "The <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> has what shape?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>; what is its shape?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S>; what shape is it?"],
+	"text": ["What shape is the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>?", "What is the shape of the <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>?", "The <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> has what shape?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; what is its shape?", "There is a <Z2> <C2> <M2> <S2> [that is] <R> the <Z> <C> <M> <S> that says <T>; what shape is it?"],
 	"nodes": [{
 		"inputs": [],
 		"type": "scene"
 	}, {
-		"side_inputs": ["<Z>", "<C>", "<M>", "<S>"],
+		"side_inputs": ["<Z>", "<C>", "<M>", "<S>", "<T>"],
 		"inputs": [0],
-		"type": "filter_unique"
+		"type": "filter_text_unique"
 	}, {
 		"side_inputs": ["<R>", "<Z2>", "<C2>", "<M2>", "<S2>"],
 		"inputs": [1],
@@ -261,6 +281,9 @@
 		"type": "Shape",
 		"name": "<S>"
 	}, {
+		"type": "Text",
+		"name": "<T>"
+	}, {
 		"type": "Relation",
 		"name": "<R>"
 	}, {
@@ -279,5 +302,6 @@
 	"constraints": [{
 		"params": ["<S2>"],
 		"type": "NULL"
-	}]
+	}],
+	"require_text": "True"
 }]
