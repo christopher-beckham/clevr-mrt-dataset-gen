@@ -614,13 +614,10 @@ def main(args):
 
   # Read file containing input scenes
   all_scenes = []
-  for f in os.listdir(args.input_scene_file):
-    if ".json" in f:
-      continue
-    with open(os.path.join(args.input_scene_file, f, 'scenes.json'), 'r') as f:
-      scene_data = json.load(f)
-      all_scenes.extend(scene_data['scenes'])
-      scene_info = scene_data['info']
+  with open(args.input_scene_file, 'r') as f:
+    scene_data = json.load(f)
+    all_scenes = scene_data['scenes']
+    scene_info = scene_data['info']
   begin = args.scene_start_idx
   if args.num_scenes > 0:
     end = args.scene_start_idx + args.num_scenes

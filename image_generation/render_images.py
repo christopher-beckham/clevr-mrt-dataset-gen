@@ -6,10 +6,10 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 from __future__ import print_function
-import math, sys, random, argparse, json, os, tempfile, string
+import math, sys, argparse, json, os, tempfile, string
 from datetime import datetime as dt
 from collections import Counter
-import numpy as np
+from random import uniform,randint,choice,random
 import builtins as __builtin__
 
 """
@@ -23,6 +23,8 @@ This file expects to be run from Blender like this:
 
 blender --background --python render_images.py -- [arguments to this script]
 """
+
+PI = 3.14159265359
 
 INSIDE_BLENDER = True
 try:
@@ -192,7 +194,7 @@ def main(args):
     blend_path = os.path.join(args.output_blend_dir, blend_path)
 
     all_scene_paths.append(scene_path)
-    num_objects = random.randint(args.min_objects, args.max_objects)
+    num_objects = randint(args.min_objects, args.max_objects)
     render_scene(args,
       num_objects=num_objects,
       output_index=(i + args.start_idx),
@@ -277,9 +279,10 @@ def render_scene(args,
 
       num_samples = 20
       # generate the points on a circle of radius r around the scene
-      theta = np.random.uniform(0, 2 * np.pi, num_samples)
+      theta = [uniform(0, 2 * PI) for _ in range(num_samples)]
       r = 10
-      x, y = r * np.cos(theta), r * np.sin(theta)
+      x = [r * math.cos(t) for t in theta]
+      y = [r * math.sin(t) for t in theta]
 
       scn = bpy.context.scene
       origin_empty = cams[0].constraints[0].target
@@ -310,7 +313,7 @@ def render_scene(args,
       path = ".".join(path_dir.split(".")[:-1]) + "_" + cam.name + ".png"
       # 6 total parameters defining the xyz location and xyz rotation (in radians) of the camera
 
-      cam_params = np.array([np.array(cam.location), np.array(cam.matrix_world.to_euler('XYZ'))]).flatten().tolist()
+      cam_params = list(cam.location[:]) + list(cam.matrix_world.to_euler('XYZ')[:])
       view_struct[cam.name] = {'split': output_split,
         'image_index': output_index + idx,
         'image_filename': os.path.basename(path.split("/")[-1]),
@@ -318,7 +321,7 @@ def render_scene(args,
         'directions': {},
         'cam_params': cam_params}
   else:
-    cam_params = np.array([np.array(cam.location), np.array(cam.rotation_euler)]).flatten().tolist()
+    cam_params = list(cam.location[:]) + list(cam.rotation_euler[:])
     view_struct['cc'] = {
         'split': output_split,
         'image_index': output_index,
@@ -333,7 +336,7 @@ def render_scene(args,
   plane = bpy.context.object
 
   def rand(L):
-    return 2.0 * L * (random.random() - 0.5)
+    return 2.0 * L * (random() - 0.5)
 
   # Add random jitter to camera position
   if args.camera_jitter > 0:
@@ -457,8 +460,8 @@ def add_random_objects(view_struct, num_objects, args, cams):
         for text in blender_texts:
           utils.delete_object(text)
         return add_random_objects(view_struct, num_objects, args, cams)
-      x = random.uniform(-3, 3)
-      y = random.uniform(-3, 3)
+      x = uniform(-3, 3)
+      y = uniform(-3, 3)
       # Check to make sure the new object is further than min_dist from all
       # other objects, and further than margin along the four cardinal directions
       dists_good = True
@@ -486,11 +489,11 @@ def add_random_objects(view_struct, num_objects, args, cams):
 
     # Choose random color and shape
     if shape_color_combos is None:
-      obj_name, obj_name_out = random.choice(object_mapping)
-      color_name, rgba = random.choice(list(color_name_to_rgba.items()))
+      obj_name, obj_name_out = choice(object_mapping)
+      color_name, rgba = choice(list(color_name_to_rgba.items()))
     else:
-      obj_name_out, color_choices = random.choice(shape_color_combos)
-      color_name = random.choice(color_choices)
+      obj_name_out, color_choices = choice(shape_color_combos)
+      color_name = choice(color_choices)
       obj_name = [k for k, v in object_mapping if v == obj_name_out][0]
       rgba = color_name_to_rgba[color_name]
 
@@ -499,7 +502,7 @@ def add_random_objects(view_struct, num_objects, args, cams):
       r /= math.sqrt(2)
 
     # Choose random orientation for the object.
-    theta = 360.0 * random.random()
+    theta = 360.0 * random()
 
     # Actually add the object to the scene
     utils.add_object(args.shape_dir, obj_name, r, (x, y), theta=theta)
@@ -509,7 +512,7 @@ def add_random_objects(view_struct, num_objects, args, cams):
     __builtin__.print("added random object " + str(i))
 
     # Attach a random material
-    mat_name, mat_name_out = random.choice(material_mapping)
+    mat_name, mat_name_out = choice(material_mapping)
     utils.add_material(mat_name, Color=rgba)
 
     # Record data about the object in the scene data structure
@@ -527,7 +530,7 @@ def add_random_objects(view_struct, num_objects, args, cams):
 
     # Generate Text
     num_chars = 1 # random.choice(range(1, 7))
-    chars = random.choice(string.ascii_lowercase)# "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
+    chars = choice(string.ascii_lowercase)# "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
 
     # Add text to Blender
     if args.text:
@@ -541,8 +544,8 @@ def add_random_objects(view_struct, num_objects, args, cams):
       text = bpy.context.scene.objects.active
       temp_dict = color_name_to_rgba.copy()
       del temp_dict[color_name]
-      mat_name, mat_name_out = random.choice(material_mapping)
-      color_name, rgba = random.choice(list(temp_dict.items()))
+      mat_name, mat_name_out = choice(material_mapping)
+      color_name, rgba = choice(list(temp_dict.items()))
       utils.add_material(mat_name, Color=rgba)
 
       for char in chars:
@@ -783,4 +786,5 @@ if __name__ == '__main__':
     print('arguments like this:')
     print()
     print('python render_images.py --help')
+
 
