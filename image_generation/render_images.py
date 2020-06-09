@@ -11,6 +11,7 @@ from datetime import datetime as dt
 from collections import Counter
 from random import uniform,randint,choice,random
 import builtins as __builtin__
+import numpy as np
 
 """
 Renders random scenes using Blender, each with with a random number of objects;
@@ -98,6 +99,7 @@ parser.add_argument('--text', action='store_true',
 parser.add_argument('--all_chars_visible', action='store_true',
     help="Determines whether we require that all text characters are visible from one view")
 parser.add_argument('--multi_view', action='store_true', help="should we write out multiple views")
+parser.add_argument('--max_texts_per_obj', default=1, type=int, help='max number of pieces of text to put on each obj')
 parser.add_argument('--shadow_less', action='store_true', help="don't render shadows")
 parser.add_argument('--random_views', action='store_true', help="should we sample different view positions around the scene")
 parser.add_argument('--enforce_obj_visibility', action='store_true', help="should all objects be visible from canonical view?")
@@ -444,7 +446,7 @@ def add_random_objects(view_struct, num_objects, args, cams):
   all_chars = []
   for i in range(num_objects):
     # Choose a random size
-    size_name, r = ('large', 0.7)#random.choice(size_mapping)
+    size_name, r = choice(size_mapping)
 
     # Try to place the object, ensuring that we don't intersect any existing
     # objects and that we are more than the desired margin away from all existing
@@ -529,28 +531,35 @@ def add_random_objects(view_struct, num_objects, args, cams):
       })
 
     # Generate Text
-    num_chars = 1 # random.choice(range(1, 7))
-    chars = choice(string.ascii_lowercase)# "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
 
     # Add text to Blender
     if args.text:
-      try:
-          word_bboxes, char_bboxes, chars = utils.add_text(chars, args.random_text_rotation, cams)
-          all_chars.extend(chars)
-      except Exception as e:
-        return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
+      all_word_bboxes = []
+      all_char_bboxes = []
+      for i in range(np.random.randint(1, args.max_texts_per_obj+1)):
+        num_chars = 1  # random.choice(range(1, 7))
+        chars = choice(string.ascii_lowercase)  # "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
 
-      # Select material and color for text
-      text = bpy.context.scene.objects.active
-      temp_dict = color_name_to_rgba.copy()
-      del temp_dict[color_name]
-      mat_name, mat_name_out = choice(material_mapping)
-      color_name, rgba = choice(list(temp_dict.items()))
-      utils.add_material(mat_name, Color=rgba)
+        try:
+          out_word_bboxes, out_char_bboxes, out_chars = utils.add_text(chars, args.random_text_rotation, cams)
+          all_chars.extend(out_chars)
+          all_word_bboxes.extend(out_word_bboxes)
+          all_char_bboxes.extend(out_char_bboxes)
+          # Select material and color for text
+          text = bpy.context.scene.objects.active
+          temp_dict = color_name_to_rgba.copy()
+          del temp_dict[color_name]
+          mat_name, mat_name_out = choice(material_mapping)
+          color_name, rgba = choice(list(temp_dict.items()))
+          utils.add_material(mat_name, Color=rgba)
 
-      for char in chars:
-        bpy.context.scene.objects.active = char
-        utils.add_material(mat_name, Color=rgba)
+          for char in out_chars:
+            bpy.context.scene.objects.active = char
+            utils.add_material(mat_name, Color=rgba)
+
+        except Exception as e:
+          return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
+
 
       blender_texts.append(text)
       __builtin__.print("added text to object " + str(i))
@@ -560,10 +569,10 @@ def add_random_objects(view_struct, num_objects, args, cams):
         bpy.context.scene.camera = cam
         all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object, cams)
         for textid, visible_pixels in visible_chars.items():
-          for char_bbox in char_bboxes[cam.name]:
+          for char_bbox in all_char_bboxes[cam.name]:
             if char_bbox['id'] == textid:
               char_bbox['visible_pixels'] = visible_pixels
-      all_chars_visible = [c['visible_pixels'] > args.min_char_pixels for c in char_bboxes['cc']]
+      all_chars_visible = [c['visible_pixels'] > args.min_char_pixels for c in all_char_bboxes['cc']]
       if args.all_chars_visible and not all(all_chars_visible):
         __builtin__.print("not all characters were visible, purging and retrying...")
         return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
@@ -576,8 +585,8 @@ def add_random_objects(view_struct, num_objects, args, cams):
           "3d_coords": tuple(text.location),
           "pixel_coords": (x / bpy.context.scene.render.resolution_x, y / bpy.context.scene.render.resolution_y),
           "color": color_name,
-          "char_bboxes": char_bboxes,
-          "word_bboxes": word_bboxes
+          "char_bboxes": all_char_bboxes,
+          "word_bboxes": all_word_bboxes
         }
     else:
       all_objects_visible, visible_chars = check_visibility(blender_objects + all_chars, args.min_pixels_per_object, cams)

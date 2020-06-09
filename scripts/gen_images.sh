@@ -6,11 +6,11 @@
 # Generate Clevr-Text
 # Generate Train set
 ~/.local/bin/blender/blender --background --python render_images.py -- --split train-clevr-text \
- --base_scene_blendfile image_generation/data/base_scene_tub.blend \
- --output_image_dir image_generation/output/train-clevr-text/images/ \
- --output_scene_dir image_generation/output/train-clevr-text/scenes/ \
- --output_scene_file image_generation/output/train-clevr-text/CLEVR_scenes.json \
- --enforce_obj_visibility --text --all_chars_visible --num_images 100 --use_gpu 1 --max_objects 3
+ --base_scene_blendfile data/base_scene_tub.blend \
+ --output_image_dir output/train-clevr-text/images/ \
+ --output_scene_dir output/train-clevr-text/scenes/ \
+ --output_scene_file output/train-clevr-text/CLEVR_scenes.json \
+ --enforce_obj_visibility --text --all_chars_visible --num_images 3 --use_gpu 0 --max_objects 3
 
 # Generate Val set
 ~/.local/bin/blender/blender --background --python render_images.py --  --split val-clevr-text \
@@ -32,12 +32,12 @@
 # Generate Clevr-Text-PO
 # Generate Train set
 ~/.local/bin/blender/blender --background --python render_images.py -- \
- --base_scene_blendfile image_generation/data/base_scene_tub.blend \
- --output_image_dir image_generation/output/train-clevr-text-po/images/ \
- --output_scene_dir image_generation/output/train-clevr-text-po/scenes/ \
- --output_scene_file image_generation/output/train-clevr-text-po/CLEVR_scenes.json \
+ --base_scene_blendfile data/base_scene_tub.blend \
+ --output_image_dir output/train-clevr-text-po/images/ \
+ --output_scene_dir output/train-clevr-text-po/scenes/ \
+ --output_scene_file output/train-clevr-text-po/CLEVR_scenes.json \
  --split train-clevr-text-po \
- --multi_view --text --num_images 100 --use_gpu 1 --max_objects 3 --multi_view --random_text_rotation
+ --multi_view --text --num_images 100 --use_gpu 1 --max_objects 3 --multi_view --random_text_rotation --max_texts_per_obj 3
 
 # Generate Val set
 ~/.local/bin/blender/blender --background --python render_images.py -- \

@@ -161,6 +161,8 @@ def load_font(text):
 
 
 def add_text(body, random_rotation, cams):
+
+
   # Take the current object and "increase the resolution"
   obj = bpy.context.active_object
   bpy.ops.object.modifier_add(type='SUBSURF')
