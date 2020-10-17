@@ -12,6 +12,14 @@
  --output_scene_file output/train-clevr-text/CLEVR_scenes.json \
  --enforce_obj_visibility --text --all_chars_visible --num_images 3 --use_gpu 0 --max_objects 3
 
+### FLO MOD
+~/.local/bin/blender/blender --background --python render_images.py -- --split train-clevr-text \
+ --base_scene_blendfile data/base_scene_tub.blend \
+ --output_image_dir output/train-clevr-text/images/ \
+ --output_scene_dir output/train-clevr-text/scenes/ \
+ --output_scene_file output/train-clevr-text/CLEVR_scenes.json \
+ --enforce_obj_visibility --text --all_chars_visible --num_images 3 --use_gpu 0 --max_objects 3
+
 # Generate Val set
 ~/.local/bin/blender/blender --background --python render_images.py --  --split val-clevr-text \
  --base_scene_blendfile image_generation/data/base_scene_tub.blend \
