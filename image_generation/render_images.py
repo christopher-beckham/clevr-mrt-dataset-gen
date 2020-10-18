@@ -25,7 +25,7 @@ This file expects to be run from Blender like this:
 blender --background --python render_images.py -- [arguments to this script]
 """
 
-PI = np.pi
+PI = math.pi
 
 INSIDE_BLENDER = True
 try:
@@ -129,6 +129,26 @@ parser.add_argument("--shadow_less", action="store_true", help="don't render sha
 parser.add_argument(
     "--random_views", action="store_true", help="should we sample different view positions around the scene"
 )
+parser.add_argument(
+    "--random_view_azimuth_min",
+    default=0,
+    type=float,
+    help="rotation/azimuth lower bound in degrees, can be negative, default: 0",
+)
+parser.add_argument(
+    "--random_view_azimuth_max", default=360, type=float, help="rotation/azimuth upper bound in deg, default: 360",
+)
+parser.add_argument(
+    "--random_view_radius", default=10.0, type=float, help="radius for cameras for random rotation",
+)
+
+parser.add_argument(
+    "--random_view_elevation_min", default=25, type=float, help="elevation lower bound in deg, default: 25",
+)
+parser.add_argument(
+    "--random_view_elevation_max", default=60, type=float, help="rotation upper bound, default: 60",
+)
+
 parser.add_argument(
     "--enforce_obj_visibility", action="store_true", help="should all objects be visible from canonical view?"
 )
@@ -330,6 +350,9 @@ def render_scene(
     render_args.resolution_percentage = 100
     render_args.tile_x = args.render_tile_size
     render_args.tile_y = args.render_tile_size
+
+    bpy.context.scene.render.engine = "CYCLES"
+
     if args.use_gpu == 1:
         # Blender changed the API for enabling CUDA at some point
         if bpy.app.version < (2, 78, 0):
@@ -354,15 +377,30 @@ def render_scene(
         cams = [obj for obj in bpy.data.objects if obj.type == "CAMERA"]
         poses = [cam.location for cam in cams]
 
-        print(poses)
         if args.random_views:
+
+            base_angle = math.atan2(cams[0].location[1], cams[0].location[0])
 
             num_samples = 20
             # generate the points on a circle of radius r around the scene
-            theta = [uniform(0, 2 * PI) for _ in range(num_samples)]
-            r = 10
-            x = [r * math.cos(t) for t in theta]
-            y = [r * math.sin(t) for t in theta]
+            azimuths = [
+                uniform(base_angle + args.random_view_azimuth_min, base_angle + args.random_view_azimuth_max)
+                for _ in range(num_samples)
+            ]
+            x = [args.random_view_radius * math.cos(a) for a in azimuths]
+            y = [args.random_view_radius * math.sin(a) for a in azimuths]
+            elevations = [
+                uniform(args.random_view_elevation_min, args.random_view_elevation_max) for _ in range(num_samples)
+            ]
+            z = [math.tan(e) * args.random_view_radius for e in elevations]
+
+            for z_i in z:
+                if z_i < 2:
+                    print(
+                        "\n\n=== WARNING: ELEVATION VERY LOW ({}). "
+                        "PROLLY HARD TO FIND WORKING CONFIGURATION WHERE NOTHING IS OBSCURED.\n"
+                        "Increase args.random_view_elevation_min\n\n".format(z_i)
+                    )
 
             scn = bpy.context.scene
             origin_empty = cams[0].constraints[0].target
@@ -374,7 +412,9 @@ def render_scene(
 
                 # create the first camera object
                 cam_obj = bpy.data.objects.new("cam" + str(i), cam)
-                cam_obj.location = (x[i], y[i], 6.0)
+                cam_obj.location = (x[i], y[i], z[i])
+
+                print("cam_obj loc", cam_obj.location)
 
                 m = cam_obj.constraints.new("TRACK_TO")
                 m.target = origin_empty
@@ -424,7 +464,8 @@ def render_scene(
     if args.camera_jitter > 0:
         for cam in cams:
             for i in range(3):
-                cams[0].location[i] += rand(args.camera_jitter)
+                cam.location[i] += rand(args.camera_jitter)
+            # cam.location[2] = 2
 
     # Figure out the left, up, and behind directions along the plane and record
     # them in the scene structure
@@ -845,6 +886,7 @@ def render_shadeless(blender_objects, path="flat.png"):
     bpy.context.scene.render.image_settings.view_settings.view_transform = "Raw"
     bpy.context.scene.render.image_settings.file_format = "OPEN_EXR"
     bpy.context.scene.render.image_settings.color_mode = "RGB"
+    bpy.context.scene.render.engine = "CYCLES"  # just making sure
 
     # Render the scene
     bpy.ops.render.render(write_still=True)
@@ -872,20 +914,55 @@ def render_shadeless(blender_objects, path="flat.png"):
     return object_colors, text_colors
 
 
-if __name__ == "__main__":
-    if INSIDE_BLENDER:
-        # Run normally
-        argv = utils.extract_args()
-        args = parser.parse_args(argv)
-        main(args)
-    elif "--help" in sys.argv or "-h" in sys.argv:
-        parser.print_help()
-    else:
-        print("This script is intended to be called from blender like this:")
-        print()
-        print("blender --background --python render_images.py -- [args]")
-        print()
-        print("You can also run as a standalone python script to view all")
-        print("arguments like this:")
-        print()
-        print("python render_images.py --help")
+# I removed the "if _nname__ == main here because it's ALWAYS main.
+# Nobody calls functions of this file from somewhere else.
+
+if INSIDE_BLENDER:
+    # Run normally
+    argv = utils.extract_args()
+    args = parser.parse_args(argv)
+
+    ### azimuth stuff
+    if args.random_view_azimuth_min > args.random_view_azimuth_max:
+        # swap it
+        args.random_view_azimuth_max, args.random_view_azimuth_min = (
+            args.random_view_azimuth_min,
+            args.random_view_azimuth_max,
+        )
+    if args.random_view_azimuth_max > 360:
+        print("FYI: 360 is a full rotation and you specified {} as max".format(args.random_view_azimuth_max))
+    args.random_view_azimuth_min = math.radians(args.random_view_azimuth_min)
+    args.random_view_azimuth_max = math.radians(args.random_view_azimuth_max)
+
+    assert 0.001 <= args.random_view_radius <= 100
+
+    ### elevation stuff
+    if args.random_view_elevation_min > args.random_view_elevation_max:
+        args.random_view_elevation_min, args.random_view_elevation_max = (
+            args.random_view_elevation_max,
+            args.random_view_elevation_min,
+        )
+
+    assert 0 < args.random_view_elevation_min <= args.random_view_elevation_max < 90
+    if args.random_view_elevation_min < 10:
+        print("\n\nWARNING: low elevation angle. Might take long to find non-obstructed perspective\n\n")
+    args.random_view_elevation_min = math.radians(args.random_view_elevation_min)
+    args.random_view_elevation_max = math.radians(args.random_view_elevation_max)
+
+    ### main prog
+    arg_names = sorted(vars(args))
+    for arg in arg_names:
+        print("{:>25} {}".format(arg, getattr(args, arg)))
+
+    main(args)
+elif "--help" in sys.argv or "-h" in sys.argv:
+    parser.print_help()
+else:
+    print("This script is intended to be called from blender like this:")
+    print()
+    print("blender --background --python render_images.py -- [args]")
+    print()
+    print("You can also run as a standalone python script to view all")
+    print("arguments like this:")
+    print()
+    print("python render_images.py --help")
