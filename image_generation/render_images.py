@@ -520,6 +520,11 @@ def render_scene(
             path_dir = bpy.context.scene.render.filepath  # save for restore
             if args.multi_view:
                 for cam in cams:
+                    # If using CC cam, hide the camera mesh
+                    if cam.name == 'cc':
+                        bpy.data.objects['camera_mesh'].hide_render = True
+                    else:
+                        bpy.data.objects['camera_mesh'].hide_render = False
                     bpy.context.scene.camera = cam
                     bpy.context.scene.render.filepath = ".".join(path_dir.split(".")[:-1]) + "_" + cam.name + ".png"
                     bpy.ops.render.render(write_still=True)
