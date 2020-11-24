@@ -4,6 +4,8 @@ Authors: Christopher Beckham, Martin Weiss, Florian Golemo, Sina Honari, Derek N
 
 **Under construction**: CLEVR-MRT dataset generation code based off the [CLEVR dataset](http://cs.stanford.edu/people/jcjohns/clevr/).
 
+<img src="out.gif" />
+
 ## Step 1: Generating Images
 First we render synthetic images using [Blender](https://www.blender.org/), outputting both rendered images as well as a JSON file containing ground-truth scene information for each image.
 
