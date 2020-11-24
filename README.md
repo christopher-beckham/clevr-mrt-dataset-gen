@@ -1,54 +1,8 @@
-# CLEVR Dataset Generation
+# CLEVR-MRT Dataset Generation
 
-This is the code used to generate the [CLEVR dataset](http://cs.stanford.edu/people/jcjohns/clevr/) as described in the paper:
+Authors: Christopher Beckham, Martin Weiss, Florian Golemo, Sina Honari, Derek Nowrouzezahrai, Christopher Pal
 
-**[CLEVR: A Diagnostic Dataset for Compositional Language and Elementary Visual Reasoning](http://cs.stanford.edu/people/jcjohns/clevr/)**
- <br>
- <a href='http://cs.stanford.edu/people/jcjohns/'>Justin Johnson</a>,
- <a href='http://home.bharathh.info/'>Bharath Hariharan</a>,
- <a href='https://lvdmaaten.github.io/'>Laurens van der Maaten</a>,
- <a href='http://vision.stanford.edu/feifeili/'>Fei-Fei Li</a>,
- <a href='http://larryzitnick.org/'>Larry Zitnick</a>,
- <a href='http://www.rossgirshick.info/'>Ross Girshick</a>
- <br>
- Presented at [CVPR 2017](http://cvpr2017.thecvf.com/)
-
-Code and pretrained models for the baselines used in the paper [can be found here](https://github.com/facebookresearch/clevr-iep).
-
-You can use this code to render synthetic images and compositional questions for those images, like this:
-
-<div align="center">
-  <img src="images/example1080.png" width="800px">
-</div>
-
-**Q:** How many small spheres are there? <br>
-**A:** 2
-
-**Q:**  What number of cubes are small things or red metal objects? <br>
-**A:**  2
-
-**Q:** Does the metal sphere have the same color as the metal cylinder? <br>
-**A:** Yes
-
-**Q:** Are there more small cylinders than metal things? <br>
-**A:** No
-
-**Q:**  There is a cylinder that is on the right side of the large yellow object behind the blue ball; is there a shiny cube in front of it? <br>
-**A:**  Yes
-
-If you find this code useful in your research then please cite
-
-```
-@inproceedings{johnson2017clevr,
-  title={CLEVR: A Diagnostic Dataset for Compositional Language and Elementary Visual Reasoning},
-  author={Johnson, Justin and Hariharan, Bharath and van der Maaten, Laurens
-          and Fei-Fei, Li and Zitnick, C Lawrence and Girshick, Ross},
-  booktitle={CVPR},
-  year={2017}
-}
-```
-
-All code was developed and tested on OSX and Ubuntu 16.04.
+**Under construction**: CLEVR-MRT dataset generation code based off the [CLEVR dataset](http://cs.stanford.edu/people/jcjohns/clevr/).
 
 ## Step 1: Generating Images
 First we render synthetic images using [Blender](https://www.blender.org/), outputting both rendered images as well as a JSON file containing ground-truth scene information for each image.
