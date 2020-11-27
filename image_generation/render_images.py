@@ -377,6 +377,9 @@ def render_scene(
         cams = [obj for obj in bpy.data.objects if obj.type == "CAMERA"]
         poses = [cam.location for cam in cams]
 
+        # ARTIFACT:
+        # here, cams is [cc, and the other three cameras]
+
         if args.random_views:
 
             base_angle = math.atan2(cams[0].location[1], cams[0].location[0])
@@ -404,7 +407,14 @@ def render_scene(
 
             scn = bpy.context.scene
             origin_empty = cams[0].constraints[0].target
+
+            # cams[0] is the canonical camera.
+            cc_norm = np.sqrt(cams[0].location.x**2 + cams[0].location.y**2)
+            cams[0].location.x = cams[0].location.x / cc_norm * args.random_view_radius
+            cams[0].location.y = cams[0].location.y / cc_norm * args.random_view_radius
+
             cams = [cams[0]]
+            print("cam_obj loc", cams[0].location)
             for i in range(num_samples):
 
                 # create the first camera
@@ -422,6 +432,7 @@ def render_scene(
                 m.up_axis = "UP_Y"
                 scn.objects.link(cam_obj)
                 cams.append(cam_obj)
+
     else:
         cams = [obj for obj in bpy.data.objects if obj.name == "cc"]
     if args.multi_view:
