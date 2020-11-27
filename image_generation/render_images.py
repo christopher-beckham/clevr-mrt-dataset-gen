@@ -409,7 +409,7 @@ def render_scene(
             origin_empty = cams[0].constraints[0].target
 
             # cams[0] is the canonical camera.
-            cc_norm = np.sqrt(cams[0].location.x**2 + cams[0].location.y**2)
+            cc_norm = math.sqrt(cams[0].location.x**2 + cams[0].location.y**2)
             cams[0].location.x = cams[0].location.x / cc_norm * args.random_view_radius
             cams[0].location.y = cams[0].location.y / cc_norm * args.random_view_radius
 
