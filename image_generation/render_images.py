@@ -669,74 +669,16 @@ def add_random_objects(view_struct, num_objects, args, cams):
                 }
             )
 
-        # Generate Text
+    # Ok, we also have to set a random colour/material
+    # for the canonical camera. So let's make that the
+    # active object and set its material here.
+    bpy.context.scene.objects.active = bpy.data.objects['camera_mesh']
+    # remove existing material
+    bpy.data.objects['camera_mesh'].data.materials.clear()
+    mat_name, _ = choice(material_mapping)
+    _, rgba = choice(list(color_name_to_rgba.items()))
 
-        # Add text to Blender
-        if args.text:
-            all_word_bboxes = []
-            all_char_bboxes = []
-            for i in range(np.random.randint(1, args.max_texts_per_obj + 1)):
-                num_chars = 1  # random.choice(range(1, 7))
-                chars = choice(
-                    string.ascii_lowercase
-                )  # "".join([random.choice(string.printable[:36]) for _ in range(num_chars)])
-
-                try:
-                    out_word_bboxes, out_char_bboxes, out_chars = utils.add_text(chars, args.random_text_rotation, cams)
-                    all_chars.extend(out_chars)
-                    all_word_bboxes.extend(out_word_bboxes)
-                    all_char_bboxes.extend(out_char_bboxes)
-                    # Select material and color for text
-                    text = bpy.context.scene.objects.active
-                    temp_dict = color_name_to_rgba.copy()
-                    del temp_dict[color_name]
-                    mat_name, mat_name_out = choice(material_mapping)
-                    color_name, rgba = choice(list(temp_dict.items()))
-                    utils.add_material(mat_name, Color=rgba)
-
-                    for char in out_chars:
-                        bpy.context.scene.objects.active = char
-                        utils.add_material(mat_name, Color=rgba)
-
-                except Exception as e:
-                    return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
-
-            blender_texts.append(text)
-            __builtin__.print("added text to object " + str(i))
-
-            # Check that all objects are at least partially visible in the rendered image
-            for cam in cams:
-                bpy.context.scene.camera = cam
-                all_objects_visible, visible_chars = check_visibility(
-                    blender_objects + all_chars, args.min_pixels_per_object, cams
-                )
-                for textid, visible_pixels in visible_chars.items():
-                    for char_bbox in all_char_bboxes[cam.name]:
-                        if char_bbox["id"] == textid:
-                            char_bbox["visible_pixels"] = visible_pixels
-            all_chars_visible = [c["visible_pixels"] > args.min_char_pixels for c in all_char_bboxes["cc"]]
-            if args.all_chars_visible and not all(all_chars_visible):
-                __builtin__.print("not all characters were visible, purging and retrying...")
-                return purge(blender_objects, blender_texts, view_struct, num_objects, args, cams)
-
-            for cam in cams:
-                x, y, _ = utils.get_camera_coords(cam, text.location)
-                objects[cam.name][-1]["text"] = {
-                    "font": text.data.font.name,
-                    "body": text.data.body,
-                    "3d_coords": tuple(text.location),
-                    "pixel_coords": (
-                        x / bpy.context.scene.render.resolution_x,
-                        y / bpy.context.scene.render.resolution_y,
-                    ),
-                    "color": color_name,
-                    "char_bboxes": all_char_bboxes,
-                    "word_bboxes": all_word_bboxes,
-                }
-        else:
-            all_objects_visible, visible_chars = check_visibility(
-                blender_objects + all_chars, args.min_pixels_per_object, cams
-            )
+    utils.add_material(mat_name, Color=rgba)
 
     if args.enforce_obj_visibility and not all_objects_visible:
         __builtin__.print("not all objects were visible, purging and retrying...")
