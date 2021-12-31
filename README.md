@@ -6,6 +6,10 @@
 
 Different types of mental rotation tests have been used extensively in psychology to understand human visual reasoning and perception. Understanding what an object or visual scene would look like from another viewpoint is a challenging problem that is made even harder if it must be performed from a single image. We explore a controlled setting whereby questions are posed about the properties of a scene if that scene was observed from another viewpoint. To do this we have created a new version of the CLEVR dataset that we call _CLEVR Mental Rotation Tests_ (CLEVR-MRT).
 
+## Exploring dataset
+
+Please see [example.ipynb](example.ipynb).
+
 ## Rendering locally (on Mac)
 
 I have rendered some test images locally on Mac as well. At least for me, this is how I did it: create a setup script, I called mine `setup_blender_mac.sh`:
